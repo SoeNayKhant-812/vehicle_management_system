@@ -1,8 +1,16 @@
 package com.example.demo.model;
 
+import jakarta.persistence.*;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
+
+@Entity
+@Table(name = "car")
 public class Car {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long Id;
+
     private String brand;
     private String model;
 

@@ -1,7 +1,13 @@
 package com.example.demo.model;
 
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "truck")
 public class Truck {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long Id;
     private String brand;
     private String model;
