@@ -14,13 +14,11 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/cars/**").permitAll() // Allow all requests to /cars/**
-                        .anyRequest().authenticated()            // Protect other routes
+                        .requestMatchers("/cars/**").permitAll()
+                        .anyRequest().authenticated()
                 )
-                .csrf(AbstractHttpConfigurer::disable) // ✅ Modern disabling syntax (lambda form)
-
-                // Optionally, customize the login form if needed
-                .httpBasic(Customizer.withDefaults()); // or .formLogin(Customizer.withDefaults());
+                .csrf(AbstractHttpConfigurer::disable)
+                .httpBasic(Customizer.withDefaults());
 
         return http.build();
     }
