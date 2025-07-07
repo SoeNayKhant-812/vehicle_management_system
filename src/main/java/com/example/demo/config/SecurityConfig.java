@@ -10,16 +10,12 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 public class SecurityConfig {
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/cars/**").permitAll()
-                        .anyRequest().authenticated()
-                )
-                .csrf(AbstractHttpConfigurer::disable)
-                .httpBasic(Customizer.withDefaults());
+	@Bean
+	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+		http.authorizeHttpRequests(
+				authorize -> authorize.requestMatchers("/cars/**").permitAll().anyRequest().authenticated())
+				.csrf(AbstractHttpConfigurer::disable).httpBasic(Customizer.withDefaults());
 
-        return http.build();
-    }
+		return http.build();
+	}
 }

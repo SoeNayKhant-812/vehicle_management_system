@@ -1,51 +1,63 @@
 package com.example.demo.service;
 
-import com.example.demo.dao.MotorcycleDAO;
 import com.example.demo.dto.MotorcycleDTO;
 import com.example.demo.exception.VehicleNotFoundException;
-import com.example.demo.model.Car;
 import com.example.demo.model.Motorcycle;
 import com.example.demo.repository.MotorcycleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.logging.Logger;
 
 @Service
 public class MotorcycleService {
 
-    @Autowired
-    private MotorcycleRepository motorcycleRepository;
-//    private MotorcycleDAO motorcycleDAO;
+	private static final Logger logger = Logger.getLogger(MotorcycleService.class.getName());
 
-    public List<Motorcycle> getAllMotorcycles() {
-        return motorcycleRepository.findAll();
-    }
+	@Autowired
+	private MotorcycleRepository motorcycleRepository;
 
-    public Motorcycle getMotorcycleById(Long id) {
-        return motorcycleRepository.findById(id)
-                .orElseThrow(() -> new VehicleNotFoundException("Motorcycle not found with ID: " + id));
-    }
+	@Autowired
+	private VehicleIdGeneratorService idGenerator;
 
-    public Motorcycle addMotorcycle(MotorcycleDTO dto) {
-        Motorcycle motorcycle = new Motorcycle(null, dto.getBrand(), dto.getModel());
-        return motorcycleRepository.save(motorcycle);
-    }
+	public List<Motorcycle> getAllMotorcycles() {
+		return motorcycleRepository.findAll();
+	}
 
-    public Motorcycle updateMotorcycle(Long id, MotorcycleDTO dto) {
-        Motorcycle existingMotorcycle = motorcycleRepository.findById(id)
-                .orElseThrow(() -> new VehicleNotFoundException("Motorcycle with ID " + id + " not found"));
+	public Motorcycle getMotorcycleById(String id) {
+		return motorcycleRepository.findById(id)
+				.orElseThrow(() -> new VehicleNotFoundException("Motorcycle not found with ID: " + id));
+	}
 
-        existingMotorcycle.setBrand(dto.getBrand());
-        existingMotorcycle.setModel(dto.getModel());
+	public Motorcycle addMotorcycle(MotorcycleDTO dto) {
+		Motorcycle motorcycle = new Motorcycle();
+		String generatedId = idGenerator.generateMotorcycleId();
+		motorcycle.setId(generatedId);
+		motorcycle.setBrand(dto.getBrand());
+		motorcycle.setModel(dto.getModel());
+		motorcycle.setCreatedAt(Instant.now());
 
-        return motorcycleRepository.save(existingMotorcycle); // save works for both insert & update
-    }
+		logger.info("Generated new Motorcycle ID: " + generatedId);
 
-    public void deleteMotorcycle(Long id) {
-        if (!motorcycleRepository.existsById(id)) {
-            throw new VehicleNotFoundException("Cannot delete. Motorcycle not found with ID: " + id);
-        }
-        motorcycleRepository.deleteById(id);
-    }
+		return motorcycleRepository.save(motorcycle);
+	}
+
+	public Motorcycle updateMotorcycle(String id, MotorcycleDTO dto) {
+		Motorcycle existingMotorcycle = motorcycleRepository.findById(id)
+				.orElseThrow(() -> new VehicleNotFoundException("Motorcycle with ID " + id + " not found"));
+
+		existingMotorcycle.setBrand(dto.getBrand());
+		existingMotorcycle.setModel(dto.getModel());
+
+		return motorcycleRepository.save(existingMotorcycle);
+	}
+
+	public void deleteMotorcycle(String id) {
+		if (!motorcycleRepository.existsById(id)) {
+			throw new VehicleNotFoundException("Cannot delete. Motorcycle not found with ID: " + id);
+		}
+		motorcycleRepository.deleteById(id);
+	}
 }

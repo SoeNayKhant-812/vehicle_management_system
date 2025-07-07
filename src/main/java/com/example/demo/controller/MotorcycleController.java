@@ -13,33 +13,33 @@ import java.util.List;
 @RequestMapping("/motorcycles")
 public class MotorcycleController {
 
-    @Autowired
-    private MotorcycleService motorcycleService;
+	@Autowired
+	private MotorcycleService motorcycleService;
 
-    @GetMapping
-    public ResponseEntity<List<Motorcycle>> getAllMotorcycles() {
-        return ResponseEntity.ok(motorcycleService.getAllMotorcycles());
-    }
+	@GetMapping
+	public ResponseEntity<List<Motorcycle>> getAllMotorcycles() {
+		return ResponseEntity.ok(motorcycleService.getAllMotorcycles());
+	}
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Motorcycle> getMotorcycleById(@PathVariable Long id) {
-        return ResponseEntity.ok(motorcycleService.getMotorcycleById(id));
-    }
+	@GetMapping("/{id}")
+	public ResponseEntity<Motorcycle> getMotorcycleById(@PathVariable String id) {
+		return ResponseEntity.ok(motorcycleService.getMotorcycleById(id));
+	}
 
-    @PostMapping("/addMotorcycle")
-    public ResponseEntity<Motorcycle> addMotorcycle(@RequestBody MotorcycleDTO dto) {
-        return ResponseEntity.ok(motorcycleService.addMotorcycle(dto));
-    }
+	@PostMapping("/addMotorcycle")
+	public ResponseEntity<Motorcycle> addMotorcycle(@RequestBody MotorcycleDTO dto) {
+		return ResponseEntity.ok(motorcycleService.addMotorcycle(dto));
+	}
 
-    @PutMapping("/{id}/update")
-    public ResponseEntity<Motorcycle> updateMotorcycle(@PathVariable Long id, @RequestBody MotorcycleDTO dto) {
-        Motorcycle updatedMotorcycle = motorcycleService.updateMotorcycle(id, dto);
-        return ResponseEntity.ok(updatedMotorcycle);
-    }
+	@PutMapping("/{id}/update")
+	public ResponseEntity<Motorcycle> updateMotorcycle(@PathVariable String id, @RequestBody MotorcycleDTO dto) {
+		Motorcycle updatedMotorcycle = motorcycleService.updateMotorcycle(id, dto);
+		return ResponseEntity.ok(updatedMotorcycle);
+	}
 
-    @DeleteMapping("/{id}/delete")
-    public ResponseEntity<String> deleteMotorcycle(@PathVariable Long id) {
-        motorcycleService.deleteMotorcycle(id);
-        return ResponseEntity.ok("Motorcycle deleted successfully");
-    }
+	@DeleteMapping("/{id}/delete")
+	public ResponseEntity<String> deleteMotorcycle(@PathVariable String id) {
+		motorcycleService.deleteMotorcycle(id);
+		return ResponseEntity.ok("Motorcycle deleted successfully");
+	}
 }
