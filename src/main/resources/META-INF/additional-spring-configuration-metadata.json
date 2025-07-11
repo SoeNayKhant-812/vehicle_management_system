@@ -1,0 +1,24 @@
+{
+	"properties": [
+		{
+			"name": "aws.region",
+			"type": "java.lang.String",
+			"description": "A description for 'aws.region'"
+		},
+		{
+			"name": "aws.dynamodb.endpoint",
+			"type": "java.lang.String",
+			"description": "A description for 'aws.dynamodb.endpoint'"
+		},
+		{
+			"name": "aws.dynamodb.accessKey",
+			"type": "java.lang.String",
+			"description": "A description for 'aws.dynamodb.accessKey'"
+		},
+		{
+			"name": "aws.dynamodb.secretKey",
+			"type": "java.lang.String",
+			"description": "A description for 'aws.dynamodb.secretKey'"
+		}
+	]
+}

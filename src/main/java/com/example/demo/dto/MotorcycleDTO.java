@@ -1,25 +1,25 @@
 package com.example.demo.dto;
 
 public class MotorcycleDTO {
-    private Long Id;
+    private String id;
     private String brand;
     private String model;
 
     public MotorcycleDTO() {
     }
 
-    public MotorcycleDTO(Long Id, String brand, String model) {
-        this.Id = Id;
+    public MotorcycleDTO(String id, String brand, String model) {
+        this.id = id;
         this.brand = brand;
         this.model = model;
     }
 
-    public Long getId() {
-        return Id;
+    public String getId() {
+        return id;
     }
 
-    public void setId(Long id) {
-        Id = id;
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getBrand() {

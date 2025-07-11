@@ -1,48 +1,44 @@
 package com.example.demo.model;
 
-import jakarta.persistence.*;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.*;
 
-@Entity
-@Table(name = "car")
+import java.time.Instant;
+
+@DynamoDbBean
 public class Car {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long Id;
-
+    private String id;
     private String brand;
     private String model;
+    private Instant createdAt;
 
-    public Car() {
+    @DynamoDbPartitionKey
+    @DynamoDbAttribute("id")
+    public String getId() {
+        return id;
     }
 
-    public Car(Long Id, String brand, String model) {
-        this.Id = Id;
-        this.brand = brand;
-        this.model = model;
-    }
+    public void setId(String id) { this.id = id; }
 
-    public Long getId() {
-        return Id;
-    }
-
-    public void setId(Long id) {
-        Id = id;
-    }
-
+    @DynamoDbAttribute("brand")
     public String getBrand() {
         return brand;
     }
 
-    public void setBrand(String brand) {
-        this.brand = brand;
-    }
+    public void setBrand(String brand) { this.brand = brand; }
 
+    @DynamoDbAttribute("model")
     public String getModel() {
         return model;
     }
 
-    public void setModel(String model) {
-        this.model = model;
+    public void setModel(String model) { this.model = model; }
+
+    @DynamoDbAttribute("createdAt")
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
     }
 }

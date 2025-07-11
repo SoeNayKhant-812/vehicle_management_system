@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="30 seconds">
+    <property name="LOG_LEVEL" value="INFO"/>
+    <property name="MAIN_LOG_FILE" value="logs/main/app.log"/>
+    <property name="CAR_LOG_PATH" value="logs/car"/>
+    <property name="MOTORCYCLE_LOG_PATH" value="logs/motorcycle"/>
+    <property name="TRUCK_LOG_PATH" value="logs/truck"/>
+    <appender name="Console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level [%thread] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+    <appender name="MainFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${MAIN_LOG_FILE}</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/main/app-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>14</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level [%thread] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+    <appender name="CarServiceFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${CAR_LOG_PATH}/car-service.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+            <fileNamePattern>${CAR_LOG_PATH}/car-service.%i.log.zip</fileNamePattern>
+            <minIndex>1</minIndex>
+            <maxIndex>3</maxIndex>
+        </rollingPolicy>
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <maxFileSize>5MB</maxFileSize>
+        </triggeringPolicy>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+    <appender name="MotorcycleServiceFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${MOTORCYCLE_LOG_PATH}/motorcycle-service.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+            <fileNamePattern>${MOTORCYCLE_LOG_PATH}/motorcycle-service.%i.log.zip</fileNamePattern>
+            <minIndex>1</minIndex>
+            <maxIndex>3</maxIndex>
+        </rollingPolicy>
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <maxFileSize>5MB</maxFileSize>
+        </triggeringPolicy>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+    <appender name="TruckServiceFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${TRUCK_LOG_PATH}/truck-service.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+            <fileNamePattern>${TRUCK_LOG_PATH}/truck-service.%i.log.zip</fileNamePattern>
+            <minIndex>1</minIndex>
+            <maxIndex>3</maxIndex>
+        </rollingPolicy>
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <maxFileSize>5MB</maxFileSize>
+        </triggeringPolicy>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+    <logger name="com.example.demo.service.CarService" level="INFO" additivity="false">
+        <appender-ref ref="CarServiceFile"/>
+        <appender-ref ref="Console"/>
+    </logger>
+    <logger name="com.example.demo.service.MotorcycleService" level="INFO" additivity="false">
+        <appender-ref ref="MotorcycleServiceFile"/>
+        <appender-ref ref="Console"/>
+    </logger>
+    <logger name="com.example.demo.service.TruckService" level="INFO" additivity="false">
+        <appender-ref ref="TruckServiceFile"/>
+        <appender-ref ref="Console"/>
+    </logger>
+    <root level="${LOG_LEVEL}">
+        <appender-ref ref="Console"/>
+        <appender-ref ref="MainFile"/>
+    </root>
+</configuration>

@@ -1,51 +1,77 @@
 package com.example.demo.service;
 
-import com.example.demo.dao.TruckDAO;
 import com.example.demo.dto.TruckDTO;
 import com.example.demo.exception.VehicleNotFoundException;
-import com.example.demo.model.Motorcycle;
 import com.example.demo.model.Truck;
 import com.example.demo.repository.TruckRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
 public class TruckService {
 
-    @Autowired
-    private TruckRepository truckRepository;
-//    private TruckDAO truckDAO;
+	private static final Logger logger = LoggerFactory.getLogger(TruckService.class);
 
-    public List<Truck> getAllTrucks() {
-        return truckRepository.findAll();
-    }
+	@Autowired
+	private TruckRepository truckRepository;
 
-    public Truck getTruckById(Long id) {
-        return truckRepository.findById(id)
-                .orElseThrow(() -> new VehicleNotFoundException("Truck not found with ID: " + id));
-    }
+	@Autowired
+	private VehicleIdGeneratorService idGenerator;
 
-    public Truck addTruck(TruckDTO dto) {
-        Truck truck = new Truck(null, dto.getBrand(), dto.getModel());
-        return truckRepository.save(truck);
-    }
+	public List<Truck> getAllTrucks() {
+		logger.info("Fetching all trucks from the database.");
+		return truckRepository.findAll();
+	}
 
-    public Truck updateTruck(Long id, TruckDTO dto) {
-        Truck existingTruck = truckRepository.findById(id)
-                .orElseThrow(() -> new VehicleNotFoundException("Truck with ID " + id + " not found"));
+	public Truck getTruckById(String id) {
+		logger.info("Fetching truck with ID: {}", id);
+		return truckRepository.findById(id).orElseThrow(() -> {
+			logger.warn("Truck not found with ID: {}", id);
+			return new VehicleNotFoundException("Truck not found with ID: " + id);
+		});
+	}
 
-        existingTruck.setBrand(dto.getBrand());
-        existingTruck.setModel(dto.getModel());
+	public Truck addTruck(TruckDTO dto) {
+		String generatedId = idGenerator.generateTruckId();
+		Truck truck = new Truck();
+		truck.setId(generatedId);
+		truck.setBrand(dto.getBrand());
+		truck.setModel(dto.getModel());
+		truck.setCreatedAt(Instant.now());
 
-        return truckRepository.save(existingTruck); // save works for both insert & update
-    }
+		logger.info("Adding new truck [ID={}, Brand={}, Model={}]", generatedId, dto.getBrand(), dto.getModel());
 
-    public void deleteTruck(Long id) {
-        if (!truckRepository.existsById(id)) {
-            throw new VehicleNotFoundException("Cannot delete. Truck not found with ID: " + id);
-        }
-        truckRepository.deleteById(id);
-    }
+		return truckRepository.save(truck);
+	}
+
+	public Truck updateTruck(String id, TruckDTO dto) {
+		logger.info("Attempting to update truck with ID: {}", id);
+		Truck existing = truckRepository.findById(id).orElseThrow(() -> {
+			logger.warn("Cannot update. Truck not found with ID: {}", id);
+			return new VehicleNotFoundException("Truck with ID " + id + " not found");
+		});
+
+		existing.setBrand(dto.getBrand());
+		existing.setModel(dto.getModel());
+
+		logger.info("Successfully updated truck with ID: {}", id);
+		return truckRepository.save(existing);
+	}
+
+	public void deleteTruck(String id) {
+		logger.info("Attempting to delete truck with ID: {}", id);
+		if (!truckRepository.existsById(id)) {
+			logger.warn("Cannot delete. Truck not found with ID: {}", id);
+			throw new VehicleNotFoundException("Cannot delete. Truck not found with ID: " + id);
+		}
+
+		truckRepository.deleteById(id);
+		logger.info("Successfully deleted truck with ID: {}", id);
+	}
 }

@@ -6,43 +6,71 @@ import com.example.demo.model.Car;
 import com.example.demo.repository.CarRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
 public class CarService {
 
-    @Autowired
-    private CarRepository carRepository;
+	private static final Logger logger = LoggerFactory.getLogger(CarService.class);
 
-    public List<Car> getAllCars() {
-        return carRepository.findAll();
-    }
+	@Autowired
+	private CarRepository carRepository;
 
-    public Car getCarById(Long id) {
-        return carRepository.findById(id)
-                .orElseThrow(() -> new VehicleNotFoundException("Car not found with ID: " + id));
-    }
+	@Autowired
+	private VehicleIdGeneratorService idGenerator;
 
-    public Car addCar(CarDTO dto) {
-        Car car = new Car(null, dto.getBrand(), dto.getModel());
-        return carRepository.save(car);
-    }
+	public List<Car> getAllCars() {
+		logger.info("Fetching all cars from the database.");
+		return carRepository.findAll();
+	}
 
-    public Car updateCar(Long id, CarDTO dto) {
-        Car existingCar = carRepository.findById(id)
-                .orElseThrow(() -> new VehicleNotFoundException("Car with ID " + id + " not found"));
+	public Car getCarById(String id) {
+		logger.info("Fetching car with ID: {}", id);
+		return carRepository.findById(id).orElseThrow(() -> {
+			logger.warn("Car not found with ID: {}", id);
+			return new VehicleNotFoundException("Car not found with ID: " + id);
+		});
+	}
 
-        existingCar.setBrand(dto.getBrand());
-        existingCar.setModel(dto.getModel());
+	public Car addCar(CarDTO dto) {
+		String generatedId = idGenerator.generateCarId();
+		Car car = new Car();
+		car.setId(generatedId);
+		car.setBrand(dto.getBrand());
+		car.setModel(dto.getModel());
+		car.setCreatedAt(Instant.now());
 
-        return carRepository.save(existingCar); // save works for both insert & update
-    }
+		logger.info("Creating new car [ID={}, Brand={}, Model={}]", generatedId, dto.getBrand(), dto.getModel());
 
-    public void deleteCar(Long id) {
-        if (!carRepository.existsById(id)) {
-            throw new VehicleNotFoundException("Cannot delete. Car not found with ID: " + id);
-        }
-        carRepository.deleteById(id);
-    }
+		return carRepository.save(car);
+	}
+
+	public Car updateCar(String id, CarDTO dto) {
+		logger.info("Attempting to update car with ID: {}", id);
+		Car existingCar = carRepository.findById(id).orElseThrow(() -> {
+			logger.warn("Cannot update. Car not found with ID: {}", id);
+			return new VehicleNotFoundException("Car with ID " + id + " not found");
+		});
+
+		existingCar.setBrand(dto.getBrand());
+		existingCar.setModel(dto.getModel());
+
+		logger.info("Successfully updated car with ID: {}", id);
+		return carRepository.save(existingCar);
+	}
+
+	public void deleteCar(String id) {
+		logger.info("Attempting to delete car with ID: {}", id);
+		if (!carRepository.existsById(id)) {
+			logger.warn("Cannot delete. Car not found with ID: {}", id);
+			throw new VehicleNotFoundException("Cannot delete. Car not found with ID: " + id);
+		}
+
+		carRepository.deleteById(id);
+		logger.info("Successfully deleted car with ID: {}", id);
+	}
 }

@@ -13,33 +13,33 @@ import java.util.List;
 @RequestMapping("/trucks")
 public class TruckController {
 
-    @Autowired
-    private TruckService truckService;
+	@Autowired
+	private TruckService truckService;
 
-    @GetMapping
-    public ResponseEntity<List<Truck>> getAllTrucks() {
-        return ResponseEntity.ok(truckService.getAllTrucks());
-    }
+	@GetMapping
+	public ResponseEntity<List<Truck>> getAllTrucks() {
+		return ResponseEntity.ok(truckService.getAllTrucks());
+	}
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Truck> getTruckById(@PathVariable Long id) {
-        return ResponseEntity.ok(truckService.getTruckById(id));
-    }
+	@GetMapping("/{id}")
+	public ResponseEntity<Truck> getTruckById(@PathVariable String id) {
+		return ResponseEntity.ok(truckService.getTruckById(id));
+	}
 
-    @PostMapping("/addTruck")
-    public ResponseEntity<Truck> addMotorcycle(@RequestBody TruckDTO dto) {
-        return ResponseEntity.ok(truckService.addTruck(dto));
-    }
+	@PostMapping("/addTruck")
+	public ResponseEntity<Truck> addTruck(@RequestBody TruckDTO dto) {
+		return ResponseEntity.ok(truckService.addTruck(dto));
+	}
 
-    @PutMapping("/{id}/update")
-    public ResponseEntity<Truck> updateTruck(@PathVariable Long id, @RequestBody TruckDTO dto) {
-        Truck updatedTruck = truckService.updateTruck(id, dto);
-        return ResponseEntity.ok(updatedTruck);
-    }
+	@PutMapping("/{id}/update")
+	public ResponseEntity<Truck> updateTruck(@PathVariable String id, @RequestBody TruckDTO dto) {
+		Truck updatedTruck = truckService.updateTruck(id, dto);
+		return ResponseEntity.ok(updatedTruck);
+	}
 
-    @DeleteMapping("/{id}/delete")
-    public ResponseEntity<String> deleteTruck(@PathVariable Long id) {
-        truckService.deleteTruck(id);
-        return ResponseEntity.ok("Truck deleted successfully");
-    }
+	@DeleteMapping("/{id}/delete")
+	public ResponseEntity<String> deleteTruck(@PathVariable String id) {
+		truckService.deleteTruck(id);
+		return ResponseEntity.ok("Truck deleted successfully");
+	}
 }
