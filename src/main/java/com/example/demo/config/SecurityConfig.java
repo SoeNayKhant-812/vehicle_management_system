@@ -3,14 +3,16 @@ package com.example.demo.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
+@EnableMethodSecurity(prePostEnabled = true, securedEnabled = true)
 public class SecurityConfig {
 
 	@Bean
@@ -20,7 +22,8 @@ public class SecurityConfig {
 				User.withUsername("admin2").password("{noop}admin2pass").roles("ADMIN").build(),
 				User.withUsername("user1").password("{noop}user1pass").roles("USER").build(),
 				User.withUsername("user2").password("{noop}user2pass").roles("USER").build(),
-				User.withUsername("user3").password("{noop}user3pass").roles("USER").build());
+				User.withUsername("user3").password("{noop}user3pass").roles("USER").build(),
+				User.withUsername("staff1").password("{noop}staff1pass").roles("STAFF").build());
 	}
 
 	@Bean
