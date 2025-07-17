@@ -21,7 +21,7 @@ public class CarService {
 	private CarRepository carRepository;
 
 	@Autowired
-	private VehicleIdGeneratorService idGenerator;
+	private IdGeneratorService idGenerator;
 
 	public List<Car> getAllCars() {
 		logger.info("Fetching all cars from the database.");

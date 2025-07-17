@@ -22,7 +22,7 @@ public class MotorcycleService {
 	private MotorcycleRepository motorcycleRepository;
 
 	@Autowired
-	private VehicleIdGeneratorService idGenerator;
+	private IdGeneratorService idGenerator;
 
 	public List<Motorcycle> getAllMotorcycles() {
 		logger.info("Fetching all motorcycles from the database.");

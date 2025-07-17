@@ -1,1 +1,2 @@
 03:47:51.488 INFO  [http-nio-8002-exec-4] c.e.demo.service.MotorcycleService - Fetching all motorcycles from the database.
+17:22:41.911 INFO  [http-nio-8002-exec-2] c.e.demo.service.MotorcycleService - Fetching all motorcycles from the database.

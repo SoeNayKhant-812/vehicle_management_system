@@ -1,0 +1,50 @@
+package com.example.demo.model;
+
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.*;
+
+import java.time.Instant;
+
+@DynamoDbBean
+public class User {
+	private String id;
+	private String username;
+	private String email;
+	private Instant createdAt;
+
+	@DynamoDbPartitionKey
+	@DynamoDbAttribute("id")
+	public String getId() {
+		return id;
+	}
+
+	public void setId(String id) {
+		this.id = id;
+	}
+
+	@DynamoDbAttribute("username")
+	public String getUsername() {
+		return username;
+	}
+
+	public void setUsername(String username) {
+		this.username = username;
+	}
+
+	@DynamoDbAttribute("email")
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	@DynamoDbAttribute("createdAt")
+	public Instant getCreatedAt() {
+		return createdAt;
+	}
+
+	public void setCreatedAt(Instant createdAt) {
+		this.createdAt = createdAt;
+	}
+}

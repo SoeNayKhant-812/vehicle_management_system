@@ -48,6 +48,7 @@ public class SecurityConfig {
 				.accessDeniedHandler(jwtAccessDeniedHandler) // 403
 		).authorizeHttpRequests(auth -> auth
 				.requestMatchers("/cars/**").permitAll()
+				.requestMatchers("/auth/login").permitAll()
 				.requestMatchers("/motorcycles/**").hasRole("USER")
 				.requestMatchers("/trucks/**").hasRole("ADMIN")
 				.anyRequest().authenticated())

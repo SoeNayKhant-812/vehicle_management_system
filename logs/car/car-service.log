@@ -9,3 +9,6 @@
 17:42:02.803 INFO  [http-nio-8002-exec-7] com.example.demo.service.CarService - Fetching all cars from the database.
 03:32:10.402 INFO  [http-nio-8002-exec-3] com.example.demo.service.CarService - Fetching all cars from the database.
 03:35:56.790 INFO  [http-nio-8002-exec-7] com.example.demo.service.CarService - Fetching all cars from the database.
+17:20:28.124 INFO  [http-nio-8002-exec-1] com.example.demo.service.CarService - Fetching all cars from the database.
+17:22:51.771 INFO  [http-nio-8002-exec-3] com.example.demo.service.CarService - Fetching all cars from the database.
+03:21:40.715 INFO  [http-nio-8002-exec-2] com.example.demo.service.CarService - Fetching all cars from the database.

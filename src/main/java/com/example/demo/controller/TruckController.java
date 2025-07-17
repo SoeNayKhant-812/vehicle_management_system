@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.dto.TruckDTO;
+import com.example.demo.mapper.TruckMapper;
 import com.example.demo.model.Truck;
 import com.example.demo.service.TruckService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +10,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/trucks")
@@ -19,26 +21,31 @@ public class TruckController {
 
 	@PreAuthorize("hasAnyRole('USER', 'STAFF', 'ADMIN')")
 	@GetMapping
-	public ResponseEntity<List<Truck>> getAllTrucks() {
-		return ResponseEntity.ok(truckService.getAllTrucks());
+	public ResponseEntity<List<TruckDTO>> getAllTrucks() {
+		List<Truck> trucks = truckService.getAllTrucks();
+		List<TruckDTO> dtos = trucks.stream().map(TruckMapper::toDTO).collect(Collectors.toList());
+		return ResponseEntity.ok(dtos);
 	}
 
 	@PreAuthorize("hasAnyRole('USER', 'STAFF', 'ADMIN')")
 	@GetMapping("/{id}")
-	public ResponseEntity<Truck> getTruckById(@PathVariable String id) {
-		return ResponseEntity.ok(truckService.getTruckById(id));
+	public ResponseEntity<TruckDTO> getTruckById(@PathVariable String id) {
+		Truck truck = truckService.getTruckById(id);
+		return ResponseEntity.ok(TruckMapper.toDTO(truck));
 	}
 
 	@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
 	@PostMapping("/addTruck")
-	public ResponseEntity<Truck> addTruck(@RequestBody TruckDTO dto) {
-		return ResponseEntity.ok(truckService.addTruck(dto));
+	public ResponseEntity<TruckDTO> addTruck(@RequestBody TruckDTO dto) {
+		Truck truck = truckService.addTruck(dto);
+		return ResponseEntity.ok(TruckMapper.toDTO(truck));
 	}
 
 	@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
 	@PutMapping("/{id}/update")
-	public ResponseEntity<Truck> updateTruck(@PathVariable String id, @RequestBody TruckDTO dto) {
-		return ResponseEntity.ok(truckService.updateTruck(id, dto));
+	public ResponseEntity<TruckDTO> updateTruck(@PathVariable String id, @RequestBody TruckDTO dto) {
+		Truck truck = truckService.updateTruck(id, dto);
+		return ResponseEntity.ok(TruckMapper.toDTO(truck));
 	}
 
 	@PreAuthorize("hasRole('ADMIN')")

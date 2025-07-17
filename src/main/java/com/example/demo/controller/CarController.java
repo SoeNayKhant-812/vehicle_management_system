@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.dto.CarDTO;
+import com.example.demo.mapper.CarMapper;
 import com.example.demo.model.Car;
 import com.example.demo.service.CarService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +10,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/cars")
@@ -19,27 +21,31 @@ public class CarController {
 
 	@PreAuthorize("hasAnyRole('USER', 'STAFF', 'ADMIN')")
 	@GetMapping
-	public ResponseEntity<List<Car>> getAllCars() {
-		return ResponseEntity.ok(carService.getAllCars());
+	public ResponseEntity<List<CarDTO>> getAllCars() {
+		List<Car> cars = carService.getAllCars();
+		List<CarDTO> dtos = cars.stream().map(CarMapper::toDTO).collect(Collectors.toList());
+		return ResponseEntity.ok(dtos);
 	}
 
 	@PreAuthorize("hasAnyRole('USER', 'STAFF', 'ADMIN')")
 	@GetMapping("/{id}")
-	public ResponseEntity<Car> getCarById(@PathVariable String id) {
-		return ResponseEntity.ok(carService.getCarById(id));
+	public ResponseEntity<CarDTO> getCarById(@PathVariable String id) {
+		Car car = carService.getCarById(id);
+		return ResponseEntity.ok(CarMapper.toDTO(car));
 	}
 
 	@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
 	@PostMapping("/addCar")
-	public ResponseEntity<Car> addCar(@RequestBody CarDTO dto) {
-		return ResponseEntity.ok(carService.addCar(dto));
+	public ResponseEntity<CarDTO> addCar(@RequestBody CarDTO dto) {
+		Car car = carService.addCar(dto);
+		return ResponseEntity.ok(CarMapper.toDTO(car));
 	}
 
 	@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
 	@PutMapping("/{id}/update")
-	public ResponseEntity<Car> updateCar(@PathVariable String id, @RequestBody CarDTO dto) {
-		Car updatedCar = carService.updateCar(id, dto);
-		return ResponseEntity.ok(updatedCar);
+	public ResponseEntity<CarDTO> updateCar(@PathVariable String id, @RequestBody CarDTO dto) {
+		Car car = carService.updateCar(id, dto);
+		return ResponseEntity.ok(CarMapper.toDTO(car));
 	}
 
 	@PreAuthorize("hasRole('ADMIN')")

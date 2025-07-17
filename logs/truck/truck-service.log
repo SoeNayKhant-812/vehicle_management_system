@@ -3,3 +3,4 @@
 17:43:06.715 INFO  [http-nio-8002-exec-2] c.example.demo.service.TruckService - Fetching all trucks from the database.
 03:31:59.944 INFO  [http-nio-8002-exec-1] c.example.demo.service.TruckService - Fetching all trucks from the database.
 03:32:35.717 INFO  [http-nio-8002-exec-7] c.example.demo.service.TruckService - Fetching all trucks from the database.
+03:26:21.540 INFO  [http-nio-8002-exec-10] c.example.demo.service.TruckService - Fetching all trucks from the database.
