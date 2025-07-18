@@ -4,6 +4,7 @@ import com.example.demo.dto.CarDTO;
 import com.example.demo.mapper.CarMapper;
 import com.example.demo.model.Car;
 import com.example.demo.service.CarService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -36,14 +37,14 @@ public class CarController {
 
 	@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
 	@PostMapping("/addCar")
-	public ResponseEntity<CarDTO> addCar(@RequestBody CarDTO dto) {
+	public ResponseEntity<CarDTO> addCar(@Valid @RequestBody CarDTO dto) {
 		Car car = carService.addCar(dto);
 		return ResponseEntity.ok(CarMapper.toDTO(car));
 	}
 
 	@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
 	@PutMapping("/{id}/update")
-	public ResponseEntity<CarDTO> updateCar(@PathVariable String id, @RequestBody CarDTO dto) {
+	public ResponseEntity<CarDTO> updateCar(@PathVariable String id, @Valid @RequestBody CarDTO dto) {
 		Car car = carService.updateCar(id, dto);
 		return ResponseEntity.ok(CarMapper.toDTO(car));
 	}

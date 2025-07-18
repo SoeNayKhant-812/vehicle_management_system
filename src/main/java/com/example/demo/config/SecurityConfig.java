@@ -15,6 +15,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import com.example.demo.security.JwtAccessDeniedHandler;
 import com.example.demo.security.JwtAuthEntryPoint;
 import com.example.demo.security.JwtFilter;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
 @EnableMethodSecurity(prePostEnabled = true, securedEnabled = true)
@@ -43,16 +45,12 @@ public class SecurityConfig {
 
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-		http.exceptionHandling(ex -> ex
-				.authenticationEntryPoint(jwtAuthEntryPoint) // 401
+		http.exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthEntryPoint) // 401
 				.accessDeniedHandler(jwtAccessDeniedHandler) // 403
-		).authorizeHttpRequests(auth -> auth
-				.requestMatchers("/cars/**").permitAll()
-				.requestMatchers("/auth/login").permitAll()
-				.requestMatchers("/motorcycles/**").hasRole("USER")
-				.requestMatchers("/trucks/**").hasRole("ADMIN")
-				.anyRequest().authenticated())
-				.csrf(AbstractHttpConfigurer::disable)
+		).authorizeHttpRequests(auth -> auth.requestMatchers("/cars/**").permitAll()
+				.requestMatchers("/auth/login","/auth/register").permitAll()
+				.requestMatchers("/motorcycles/**").hasRole("USER").requestMatchers("/trucks/**")
+				.hasRole("ADMIN").anyRequest().authenticated()).csrf(AbstractHttpConfigurer::disable)
 				.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
 				.httpBasic(Customizer.withDefaults());
@@ -63,6 +61,11 @@ public class SecurityConfig {
 	@Bean
 	public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
 		return config.getAuthenticationManager();
+	}
+
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
 	}
 
 }

@@ -20,7 +20,7 @@ public class UserRepository {
 	}
 
 	@PostConstruct
-	public void createTableIfNotExists() {
+	public void createTableAndDefaultUsers() {
 		try {
 			userTable.createTable();
 		} catch (Exception e) {

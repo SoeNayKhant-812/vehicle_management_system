@@ -1,40 +1,50 @@
 package com.example.demo.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
 public class TruckDTO {
-    private String id;
-    private String brand;
-    private String model;
 
-    public TruckDTO() {
-    }
+	private String id;
 
-    public TruckDTO(String id, String brand, String model) {
-        this.id = id;
-        this.brand = brand;
-        this.model = model;
-    }
+	@NotBlank(message = "Truck brand is required")
+	@Size(min = 2, max = 50, message = "Brand must be between 2 and 50 characters")
+	private String brand;
 
-    public String getId() {
-        return id;
-    }
+	@NotBlank(message = "Truck model is required")
+	@Size(min = 1, max = 50, message = "Model must be between 1 and 50 characters")
+	private String model;
 
-    public void setId(String id) {
-        this.id = id;
-    }
+	public TruckDTO() {
+	}
 
-    public String getBrand() {
-        return brand;
-    }
+	public TruckDTO(String id, String brand, String model) {
+		this.id = id;
+		this.brand = brand;
+		this.model = model;
+	}
 
-    public void setBrand(String brand) {
-        this.brand = brand;
-    }
+	public String getId() {
+		return id;
+	}
 
-    public String getModel() {
-        return model;
-    }
+	public void setId(String id) {
+		this.id = id;
+	}
 
-    public void setModel(String model) {
-        this.model = model;
-    }
+	public String getBrand() {
+		return brand;
+	}
+
+	public void setBrand(String brand) {
+		this.brand = brand;
+	}
+
+	public String getModel() {
+		return model;
+	}
+
+	public void setModel(String model) {
+		this.model = model;
+	}
 }

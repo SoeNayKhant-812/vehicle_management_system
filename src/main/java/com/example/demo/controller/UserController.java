@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.dto.UserDTO;
+import com.example.demo.dto.UserRegisterRequest;
 import com.example.demo.mapper.UserMapper;
 import com.example.demo.model.User;
 import com.example.demo.service.UserService;
@@ -37,16 +38,17 @@ public class UserController {
 
 	@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
 	@PostMapping("/addUser")
-	public ResponseEntity<UserDTO> addUser(@Valid @RequestBody UserDTO dto) {
-		User user = userService.addUser(dto);
+	public ResponseEntity<UserDTO> addUser(@Valid @RequestBody UserRegisterRequest request) {
+		User user = userService.addUser(request);
 		return ResponseEntity.ok(UserMapper.toDTO(user));
 	}
 
 	@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
 	@PutMapping("/{id}/update")
-	public ResponseEntity<UserDTO> updateUser(@PathVariable String id, @Valid @RequestBody UserDTO dto) {
-		User user = userService.updateUser(id, dto);
-		return ResponseEntity.ok(UserMapper.toDTO(user));
+	public ResponseEntity<UserDTO> updateUser(@PathVariable String id,
+			@Valid @RequestBody UserRegisterRequest request) {
+		User updatedUser = userService.updateUser(id, request);
+		return ResponseEntity.ok(UserMapper.toDTO(updatedUser));
 	}
 
 	@PreAuthorize("hasRole('ADMIN')")
