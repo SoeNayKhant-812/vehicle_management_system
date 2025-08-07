@@ -2,6 +2,8 @@ package com.example.demo.service;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
@@ -11,10 +13,11 @@ import java.util.stream.Collectors;
 @Service
 public class JwtService {
 
-	private final String SECRET_KEY = "your-very-secret-and-long-key-should-be-at-least-256-bits-long";
+	@Value("${jwt.secret}")
+	private String rawSecret;
 
 	private Key getSigningKey() {
-		return Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
+		return Keys.hmacShaKeyFor(rawSecret.getBytes());
 	}
 
 	public String generateToken(String username, List<String> roles) {

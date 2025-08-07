@@ -26,7 +26,7 @@ public class UserService {
 	private final UserRepository userRepository;
 	private final IdGeneratorService idGenerator;
 	private final PasswordEncoder passwordEncoder;
-	private RoleRepository roleRepository;
+	private final RoleRepository roleRepository;
 
 	@Autowired
 	public UserService(UserRepository userRepository, IdGeneratorService idGenerator, PasswordEncoder passwordEncoder,

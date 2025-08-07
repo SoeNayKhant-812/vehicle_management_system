@@ -11,11 +11,10 @@ import java.util.*;
 @Repository
 public class CarRepository {
 
-	private final DynamoDbEnhancedClient enhancedClient;
-	private final DynamoDbTable<Car> carTable;
+    private final DynamoDbTable<Car> carTable;
 
 	public CarRepository(DynamoDbClient dynamoDbClient) {
-		this.enhancedClient = DynamoDbEnhancedClient.builder().dynamoDbClient(dynamoDbClient).build();
+        DynamoDbEnhancedClient enhancedClient = DynamoDbEnhancedClient.builder().dynamoDbClient(dynamoDbClient).build();
 		this.carTable = enhancedClient.table("car", TableSchema.fromBean(Car.class));
 	}
 

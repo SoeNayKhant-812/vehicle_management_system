@@ -15,62 +15,66 @@ import java.util.List;
 @Service
 public class CarService {
 
-	private static final Logger logger = LoggerFactory.getLogger(CarService.class);
+    private static final Logger logger = LoggerFactory.getLogger(CarService.class);
 
-	@Autowired
-	private CarRepository carRepository;
+    private final CarRepository carRepository;
 
-	@Autowired
-	private IdGeneratorService idGenerator;
+    private final IdGeneratorService idGenerator;
 
-	public List<Car> getAllCars() {
-		logger.info("Fetching all cars from the database.");
-		return carRepository.findAll();
-	}
+    @Autowired
+    public CarService(CarRepository carRepository, IdGeneratorService idGenerator) {
+        this.carRepository = carRepository;
+        this.idGenerator = idGenerator;
+    }
 
-	public Car getCarById(String id) {
-		logger.info("Fetching car with ID: {}", id);
-		return carRepository.findById(id).orElseThrow(() -> {
-			logger.warn("Car not found with ID: {}", id);
-			return new VehicleNotFoundException("Car not found with ID: " + id);
-		});
-	}
+    public List<Car> getAllCars() {
+        logger.info("Fetching all cars from the database.");
+        return carRepository.findAll();
+    }
 
-	public Car addCar(CarDTO dto) {
-		String generatedId = idGenerator.generateCarId();
-		Car car = new Car();
-		car.setId(generatedId);
-		car.setBrand(dto.getBrand());
-		car.setModel(dto.getModel());
-		car.setCreatedAt(Instant.now());
+    public Car getCarById(String id) {
+        logger.info("Fetching car with ID: {}", id);
+        return carRepository.findById(id).orElseThrow(() -> {
+            logger.warn("Car not found with ID: {}", id);
+            return new VehicleNotFoundException("Car not found with ID: " + id);
+        });
+    }
 
-		logger.info("Creating new car [ID={}, Brand={}, Model={}]", generatedId, dto.getBrand(), dto.getModel());
+    public Car addCar(CarDTO dto) {
+        String generatedId = idGenerator.generateCarId();
+        Car car = new Car();
+        car.setId(generatedId);
+        car.setBrand(dto.getBrand());
+        car.setModel(dto.getModel());
+        car.setCreatedAt(Instant.now());
 
-		return carRepository.save(car);
-	}
+        logger.info("Creating new car [ID={}, Brand={}, Model={}]", generatedId, dto.getBrand(), dto.getModel());
 
-	public Car updateCar(String id, CarDTO dto) {
-		logger.info("Attempting to update car with ID: {}", id);
-		Car existingCar = carRepository.findById(id).orElseThrow(() -> {
-			logger.warn("Cannot update. Car not found with ID: {}", id);
-			return new VehicleNotFoundException("Car with ID " + id + " not found");
-		});
+        return carRepository.save(car);
+    }
 
-		existingCar.setBrand(dto.getBrand());
-		existingCar.setModel(dto.getModel());
+    public Car updateCar(String id, CarDTO dto) {
+        logger.info("Attempting to update car with ID: {}", id);
+        Car existingCar = carRepository.findById(id).orElseThrow(() -> {
+            logger.warn("Cannot update. Car not found with ID: {}", id);
+            return new VehicleNotFoundException("Car with ID " + id + " not found");
+        });
 
-		logger.info("Successfully updated car with ID: {}", id);
-		return carRepository.save(existingCar);
-	}
+        existingCar.setBrand(dto.getBrand());
+        existingCar.setModel(dto.getModel());
 
-	public void deleteCar(String id) {
-		logger.info("Attempting to delete car with ID: {}", id);
-		if (!carRepository.existsById(id)) {
-			logger.warn("Cannot delete. Car not found with ID: {}", id);
-			throw new VehicleNotFoundException("Cannot delete. Car not found with ID: " + id);
-		}
+        logger.info("Successfully updated car with ID: {}", id);
+        return carRepository.save(existingCar);
+    }
 
-		carRepository.deleteById(id);
-		logger.info("Successfully deleted car with ID: {}", id);
-	}
+    public void deleteCar(String id) {
+        logger.info("Attempting to delete car with ID: {}", id);
+        if (!carRepository.existsById(id)) {
+            logger.warn("Cannot delete. Car not found with ID: {}", id);
+            throw new VehicleNotFoundException("Cannot delete. Car not found with ID: " + id);
+        }
+
+        carRepository.deleteById(id);
+        logger.info("Successfully deleted car with ID: {}", id);
+    }
 }

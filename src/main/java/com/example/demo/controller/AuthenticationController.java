@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import com.example.demo.dto.LoginRequest;
 import com.example.demo.dto.LoginResponse;
 import com.example.demo.dto.UserRegisterRequest;
+import com.example.demo.security.JwtAuthEntryPoint;
 import com.example.demo.service.JwtService;
 import com.example.demo.service.UserService;
 
@@ -26,47 +27,47 @@ import java.util.List;
 @RequestMapping("/auth")
 public class AuthenticationController {
 
-	private static final Logger logger = LoggerFactory.getLogger(AuthenticationController.class);
+    private static final Logger logger = LoggerFactory.getLogger(AuthenticationController.class);
+    private final AuthenticationManager authenticationManager;
+    private final UserDetailsService userDetailsService;
+    private final JwtService jwtService;
+    private final UserService userService;
 
-	@Autowired
-	private AuthenticationManager authenticationManager;
+    @Autowired
+    public AuthenticationController(AuthenticationManager authenticationManager, UserDetailsService userDetailsService, JwtService jwtService, UserService userService) {
+        this.authenticationManager = authenticationManager;
+        this.userDetailsService = userDetailsService;
+        this.jwtService = jwtService;
+        this.userService = userService;
+    }
 
-	@Autowired
-	private UserDetailsService userDetailsService;
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+        logger.info("Attempting login for user: {}", request.getUsername());
 
-	@Autowired
-	private JwtService jwtService;
+        // Perform authentication
+        Authentication authentication = new UsernamePasswordAuthenticationToken(request.getUsername(),
+                request.getPassword());
+        authenticationManager.authenticate(authentication);
 
-	@Autowired
-	private UserService userService;
+        // Generate JWT token
+        UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());
+        List<String> roles = userDetails.getAuthorities().stream()
+                .map(authority -> authority.getAuthority().replace("ROLE_", "")).toList();
 
-	@PostMapping("/login")
-	public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-		logger.info("Attempting login for user: {}", request.getUsername());
+        String token = jwtService.generateToken(userDetails.getUsername(), roles);
 
-		// Perform authentication
-		Authentication authentication = new UsernamePasswordAuthenticationToken(request.getUsername(),
-				request.getPassword());
-		authenticationManager.authenticate(authentication);
+        logger.info("Login successful for user: {}", request.getUsername());
+        return ResponseEntity.ok(new LoginResponse(token));
+    }
 
-		// Generate JWT token
-		UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());
-		List<String> roles = userDetails.getAuthorities().stream()
-				.map(authority -> authority.getAuthority().replace("ROLE_", "")).toList();
+    @PostMapping("/register")
+    public ResponseEntity<String> register(@Valid @RequestBody UserRegisterRequest request) {
+        logger.info("Registering new user: {}", request.getUsername());
 
-		String token = jwtService.generateToken(userDetails.getUsername(), roles);
+        userService.addUser(request);
 
-		logger.info("Login successful for user: {}", request.getUsername());
-		return ResponseEntity.ok(new LoginResponse(token));
-	}
-
-	@PostMapping("/register")
-	public ResponseEntity<String> register(@Valid @RequestBody UserRegisterRequest request) {
-		logger.info("Registering new user: {}", request.getUsername());
-
-		userService.addUser(request);
-
-		logger.info("Registration successful for user: {}", request.getUsername());
-		return ResponseEntity.ok("User registered successfully.");
-	}
+        logger.info("Registration successful for user: {}", request.getUsername());
+        return ResponseEntity.ok("User registered successfully.");
+    }
 }
