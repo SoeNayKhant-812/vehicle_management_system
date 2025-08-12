@@ -27,6 +27,12 @@ public class MotorcycleLogService {
 
 	public void logMotorcycleAction(Motorcycle motorcycle, String action, String performedByUserId,
 			String performedByUsername) {
+		MotorcycleLog log = buildMotorcycleLog(motorcycle, action, performedByUserId, performedByUsername);
+		motorcycleLogRepository.save(log);
+	}
+
+	public MotorcycleLog buildMotorcycleLog(Motorcycle motorcycle, String action, String performedByUserId,
+			String performedByUsername) {
 		MotorcycleLog log = new MotorcycleLog();
 		log.setId(idGeneratorService.generateMotorcycleLogId());
 		log.setMotorcycleId(motorcycle.getId());
@@ -36,7 +42,7 @@ public class MotorcycleLogService {
 		log.setTimestamp(Instant.now());
 		log.setPerformedByUserId(performedByUserId);
 		log.setPerformedByUsername(performedByUsername);
-		motorcycleLogRepository.save(log);
+		return log;
 	}
 
 	public List<MotorcycleLog> getAllLogs(int pageSize, Map<String, AttributeValue> startKey,

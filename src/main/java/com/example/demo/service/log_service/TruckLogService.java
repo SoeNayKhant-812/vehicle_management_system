@@ -25,6 +25,11 @@ public class TruckLogService {
 	}
 
 	public void logTruckAction(Truck truck, String action, String performedByUserId, String performedByUsername) {
+		TruckLog log = buildTruckLog(truck, action, performedByUserId, performedByUsername);
+		truckLogRepository.save(log);
+	}
+
+	public TruckLog buildTruckLog(Truck truck, String action, String performedByUserId, String performedByUsername) {
 		TruckLog log = new TruckLog();
 		log.setId(idGeneratorService.generateTruckLogId());
 		log.setTruckId(truck.getId());
@@ -34,17 +39,16 @@ public class TruckLogService {
 		log.setTimestamp(Instant.now());
 		log.setPerformedByUserId(performedByUserId);
 		log.setPerformedByUsername(performedByUsername);
-		truckLogRepository.save(log);
+		return log;
 	}
 
 	public List<TruckLog> getAllLogs(int pageSize, Map<String, AttributeValue> startKey,
-									 Holder<Map<String, AttributeValue>> lastKeyHolder) {
+			Holder<Map<String, AttributeValue>> lastKeyHolder) {
 		return truckLogRepository.scanAll(pageSize, startKey, new ArrayList<>(), lastKeyHolder);
 	}
 
 	public List<TruckLog> getFilteredLogs(Map<String, String> filters, int pageSize,
-										  Map<String, AttributeValue> startKey,
-										  Holder<Map<String, AttributeValue>> lastKeyHolder) {
+			Map<String, AttributeValue> startKey, Holder<Map<String, AttributeValue>> lastKeyHolder) {
 		return truckLogRepository.queryWithFilters(filters, startKey, pageSize, lastKeyHolder);
 	}
 }

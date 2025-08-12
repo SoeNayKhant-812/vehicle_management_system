@@ -15,36 +15,40 @@ import java.util.*;
 @Service
 public class CarLogService {
 
-    private final CarLogRepository carLogRepository;
-    private final IdGeneratorService idGeneratorService;
+	private final CarLogRepository carLogRepository;
+	private final IdGeneratorService idGeneratorService;
 
-    @Autowired
-    public CarLogService(CarLogRepository carLogRepository, IdGeneratorService idGeneratorService) {
-        this.carLogRepository = carLogRepository;
-        this.idGeneratorService = idGeneratorService;
-    }
+	@Autowired
+	public CarLogService(CarLogRepository carLogRepository, IdGeneratorService idGeneratorService) {
+		this.carLogRepository = carLogRepository;
+		this.idGeneratorService = idGeneratorService;
+	}
 
-    public void logCarAction(Car car, String action, String performedByUserId, String performedByUsername) {
-        CarLog log = new CarLog();
-        log.setId(idGeneratorService.generateCarLogId());
-        log.setCarId(car.getId());
-        log.setBrand(car.getBrand());
-        log.setModel(car.getModel());
-        log.setAction(action);
-        log.setTimestamp(Instant.now());
-        log.setPerformedByUserId(performedByUserId);
-        log.setPerformedByUsername(performedByUsername);
-        carLogRepository.save(log);
-    }
+	public void logCarAction(Car car, String action, String performedByUserId, String performedByUsername) {
+		CarLog log = buildCarLog(car, action, performedByUserId, performedByUsername);
+		carLogRepository.save(log);
+	}
 
-    public List<CarLog> getAllLogs(int pageSize, Map<String, AttributeValue> startKey, 
-                                   Holder<Map<String, AttributeValue>> lastKeyHolder) {
-        return carLogRepository.scanAll(pageSize, startKey, new ArrayList<>(), lastKeyHolder);
-    }
+	public CarLog buildCarLog(Car car, String action, String performedByUserId, String performedByUsername) {
+		CarLog log = new CarLog();
+		log.setId(idGeneratorService.generateCarLogId());
+		log.setCarId(car.getId());
+		log.setBrand(car.getBrand());
+		log.setModel(car.getModel());
+		log.setAction(action);
+		log.setTimestamp(Instant.now());
+		log.setPerformedByUserId(performedByUserId);
+		log.setPerformedByUsername(performedByUsername);
+		return log;
+	}
 
-    public List<CarLog> getFilteredLogs(Map<String, String> filters, int pageSize, 
-                                        Map<String, AttributeValue> startKey,
-                                        Holder<Map<String, AttributeValue>> lastKeyHolder) {
-        return carLogRepository.queryWithFilters(filters, startKey, pageSize, lastKeyHolder);
-    }
+	public List<CarLog> getAllLogs(int pageSize, Map<String, AttributeValue> startKey,
+			Holder<Map<String, AttributeValue>> lastKeyHolder) {
+		return carLogRepository.scanAll(pageSize, startKey, new ArrayList<>(), lastKeyHolder);
+	}
+
+	public List<CarLog> getFilteredLogs(Map<String, String> filters, int pageSize, Map<String, AttributeValue> startKey,
+			Holder<Map<String, AttributeValue>> lastKeyHolder) {
+		return carLogRepository.queryWithFilters(filters, startKey, pageSize, lastKeyHolder);
+	}
 }

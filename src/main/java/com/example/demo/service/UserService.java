@@ -1,22 +1,27 @@
 package com.example.demo.service;
 
 import com.example.demo.dto.UserRegisterRequest;
-import com.example.demo.exception.VehicleNotFoundException;
+import com.example.demo.exception.TransactionFailureException;
+import com.example.demo.exception.UserNotFoundException;
 import com.example.demo.model.Role;
 import com.example.demo.model.User;
-import com.example.demo.repository.RoleRepository;
+import com.example.demo.model.log_model.UserLog;
 import com.example.demo.repository.UserRepository;
+import com.example.demo.repository.RoleRepository;
+import com.example.demo.service.log_service.UserLogService;
 
 import jakarta.annotation.PostConstruct;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class UserService {
@@ -27,14 +32,15 @@ public class UserService {
 	private final IdGeneratorService idGenerator;
 	private final PasswordEncoder passwordEncoder;
 	private final RoleRepository roleRepository;
+	private final UserLogService userLogService;
 
-	@Autowired
 	public UserService(UserRepository userRepository, IdGeneratorService idGenerator, PasswordEncoder passwordEncoder,
-			RoleRepository roleRepository) {
+			RoleRepository roleRepository, UserLogService userLogService) {
 		this.userRepository = userRepository;
 		this.idGenerator = idGenerator;
 		this.passwordEncoder = passwordEncoder;
 		this.roleRepository = roleRepository;
+		this.userLogService = userLogService;
 	}
 
 	@PostConstruct
@@ -52,11 +58,31 @@ public class UserService {
 			userRequest.setEmail("user@example.com");
 			userRequest.setRole("USER");
 
-			addUser(adminRequest);
-			addUser(userRequest);
-
-			System.out.println("Default admin and user accounts created initially!");
+			try {
+				addUser(adminRequest);
+				addUser(userRequest);
+				logger.info("Default admin and user accounts created initially!");
+			} catch (Exception ex) {
+				logger.error("Failed to create default users: {}", ex.getMessage(), ex);
+			}
 		}
+	}
+
+	private User getCurrentUser() {
+		return getCurrentUserOrThrow();
+	}
+
+	public Optional<User> getCurrentUserOpt() {
+		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+			return Optional.empty();
+		}
+		String username = auth.getName();
+		return userRepository.findAll().stream().filter(u -> u.getUsername().equals(username)).findFirst();
+	}
+
+	public User getCurrentUserOrThrow() {
+		return getCurrentUserOpt().orElseThrow(() -> new UserNotFoundException("No authenticated user found"));
 	}
 
 	public List<User> getAllUsers() {
@@ -68,11 +94,17 @@ public class UserService {
 		logger.info("Fetching user with ID: {}", id);
 		return userRepository.findById(id).orElseThrow(() -> {
 			logger.warn("User not found with ID: {}", id);
-			return new VehicleNotFoundException("User not found with ID: " + id);
+			return new UserNotFoundException("User not found with ID: " + id);
 		});
 	}
 
-	public User addUser(UserRegisterRequest request) {
+	public User addUser(UserRegisterRequest request) throws TransactionFailureException {
+		validateUserRequest(request);
+
+		User currentUser = getCurrentUser();
+		String performedByUserId = currentUser.getId();
+		String performedByUsername = currentUser.getUsername();
+
 		String userId = idGenerator.generateUserId();
 		User user = new User();
 
@@ -81,45 +113,95 @@ public class UserService {
 		user.setEmail(request.getEmail());
 		user.setPassword(passwordEncoder.encode(request.getPassword()));
 		user.setCreatedAt(Instant.now());
-		// Set role from DB (case-insensitive)
-		String roleName = request.getRole().toUpperCase();
-		Role role = roleRepository.findByName(roleName)
-				.orElseThrow(() -> new IllegalArgumentException("Invalid role: " + roleName));
-		user.setRole(role);
-		logger.info("Registering new user [ID={}, Username={}, Email={}]", userId, user.getUsername(), user.getEmail());
 
-		return userRepository.save(user);
+		Role role = roleRepository.findByName(request.getRole().toUpperCase())
+				.orElseThrow(() -> new IllegalArgumentException("Invalid role: " + request.getRole()));
+		user.setRole(role);
+
+		UserLog log = userLogService.buildUserLog(user, "CREATE", performedByUserId, performedByUsername);
+
+		logger.info("Creating new user & log [userId={}, logId={}]", user.getId(), log.getId());
+
+		try {
+			return userRepository.saveWithLog(user, log);
+		} catch (RuntimeException ex) {
+			logger.error("Failed to create user with transactional log for userId={}: {}", user.getId(),
+					ex.getMessage(), ex);
+			throw new TransactionFailureException("Failed to save user with log", ex);
+		}
 	}
 
-	public User updateUser(String id, UserRegisterRequest request) {
-		logger.info("Attempting to update user with ID: {}", id);
+	public User updateUser(String id, UserRegisterRequest request) throws TransactionFailureException {
+		validateUserRequest(request);
+
+		User currentUser = getCurrentUser();
+		String performedByUserId = currentUser.getId();
+		String performedByUsername = currentUser.getUsername();
+
 		User existingUser = userRepository.findById(id).orElseThrow(() -> {
 			logger.warn("Cannot update. User not found with ID: {}", id);
-			return new VehicleNotFoundException("User with ID " + id + " not found");
+			return new UserNotFoundException("User with ID " + id + " not found");
 		});
 
 		existingUser.setUsername(request.getUsername());
 		existingUser.setEmail(request.getEmail());
 		existingUser.setPassword(passwordEncoder.encode(request.getPassword()));
-		// Update role if present
-		String roleName = request.getRole().toUpperCase();
-		Role role = roleRepository.findByName(roleName)
-				.orElseThrow(() -> new IllegalArgumentException("Invalid role: " + roleName));
-		existingUser.setRole(role);
-		logger.info("Successfully updated user with ID: {}", id);
 
-		return userRepository.save(existingUser);
+		Role role = roleRepository.findByName(request.getRole().toUpperCase())
+				.orElseThrow(() -> new IllegalArgumentException("Invalid role: " + request.getRole()));
+		existingUser.setRole(role);
+
+		UserLog log = userLogService.buildUserLog(existingUser, "UPDATE", performedByUserId, performedByUsername);
+
+		logger.info("Updating user & writing log [userId={}, logId={}]", existingUser.getId(), log.getId());
+
+		try {
+			return userRepository.updateWithLog(existingUser, log);
+		} catch (RuntimeException ex) {
+			logger.error("Failed to update user with transactional log for userId={}: {}", existingUser.getId(),
+					ex.getMessage(), ex);
+			throw new TransactionFailureException("Failed to update user with log", ex);
+		}
 	}
 
-	public void deleteUser(String id) {
-		logger.info("Attempting to delete user with ID: {}", id);
-
-		if (!userRepository.existsById(id)) {
+	public void deleteUser(String id) throws TransactionFailureException {
+		User existingUser = userRepository.findById(id).orElseThrow(() -> {
 			logger.warn("Cannot delete. User not found with ID: {}", id);
-			throw new VehicleNotFoundException("Cannot delete. User not found with ID: " + id);
-		}
+			return new UserNotFoundException("Cannot delete. User not found with ID: " + id);
+		});
 
-		userRepository.deleteById(id);
-		logger.info("Successfully deleted user with ID: {}", id);
+		User currentUser = getCurrentUser();
+		String performedByUserId = currentUser.getId();
+		String performedByUsername = currentUser.getUsername();
+
+		UserLog log = userLogService.buildUserLog(existingUser, "DELETE", performedByUserId, performedByUsername);
+
+		logger.info("Deleting user & writing log [userId={}, logId={}]", existingUser.getId(), log.getId());
+
+		try {
+			userRepository.deleteWithLog(existingUser, log);
+		} catch (RuntimeException ex) {
+			logger.error("Failed to delete user with transactional log for userId={}: {}", existingUser.getId(),
+					ex.getMessage(), ex);
+			throw new TransactionFailureException("Failed to delete user with log", ex);
+		}
+	}
+
+	private void validateUserRequest(UserRegisterRequest request) {
+		if (request == null) {
+			throw new IllegalArgumentException("User data is required");
+		}
+		if (request.getUsername() == null || request.getUsername().trim().isEmpty()) {
+			throw new IllegalArgumentException("Username is required");
+		}
+		if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+			throw new IllegalArgumentException("Email is required");
+		}
+		if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+			throw new IllegalArgumentException("Password is required");
+		}
+		if (request.getRole() == null || request.getRole().trim().isEmpty()) {
+			throw new IllegalArgumentException("Role is required");
+		}
 	}
 }

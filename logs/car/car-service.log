@@ -12,3 +12,10 @@
 17:20:28.124 INFO  [http-nio-8002-exec-1] com.example.demo.service.CarService - Fetching all cars from the database.
 17:22:51.771 INFO  [http-nio-8002-exec-3] com.example.demo.service.CarService - Fetching all cars from the database.
 03:21:40.715 INFO  [http-nio-8002-exec-2] com.example.demo.service.CarService - Fetching all cars from the database.
+16:09:30.472 INFO  [http-nio-8002-exec-4] com.example.demo.service.CarService - Fetching all cars from the database.
+16:10:00.182 INFO  [http-nio-8002-exec-10] com.example.demo.service.CarService - Fetching all cars from the database.
+16:14:11.474 INFO  [http-nio-8002-exec-4] com.example.demo.service.CarService - Creating new car & log [carId=CAR_03af7a19-c40a-4071-a569-a1323eb5000a_1754903651471, logId=CAR_LOG_60e503a4-aedc-4ef5-9576-a787740bcaed_1754903651474]
+16:14:17.689 INFO  [http-nio-8002-exec-6] com.example.demo.service.CarService - Fetching all cars from the database.
+16:17:21.129 INFO  [http-nio-8002-exec-3] com.example.demo.service.CarService - Updating car & writing log [carId=CAR_03af7a19-c40a-4071-a569-a1323eb5000a_1754903651471, logId=CAR_LOG_156a1ce9-1c26-4aab-8806-c24ae5e12e0a_1754903841129]
+16:17:27.020 INFO  [http-nio-8002-exec-5] com.example.demo.service.CarService - Fetching all cars from the database.
+16:18:33.043 INFO  [http-nio-8002-exec-7] com.example.demo.service.CarService - Deleting car & writing log [carId=CAR_03af7a19-c40a-4071-a569-a1323eb5000a_1754903651471, logId=CAR_LOG_0a4949b6-5edc-4736-9a84-24a7850ff936_1754903913043]

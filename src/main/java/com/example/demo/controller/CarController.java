@@ -44,7 +44,8 @@ public class CarController {
 
 	@PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
 	@PutMapping("/{id}/update")
-	public ResponseEntity<CarDTO> updateCar(@PathVariable String id, @Valid @RequestBody CarDTO dto) {
+	public ResponseEntity<CarDTO> updateCar(@PathVariable String id, @Valid @RequestBody CarDTO dto,
+			String performedByUserId, String performedByUsername) {
 		Car car = carService.updateCar(id, dto);
 		return ResponseEntity.ok(CarMapper.toDTO(car));
 	}

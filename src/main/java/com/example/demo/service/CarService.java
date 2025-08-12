@@ -1,13 +1,16 @@
 package com.example.demo.service;
 
 import com.example.demo.dto.CarDTO;
+import com.example.demo.exception.TransactionFailureException;
 import com.example.demo.exception.VehicleNotFoundException;
 import com.example.demo.model.Car;
+import com.example.demo.model.User;
+import com.example.demo.model.log_model.CarLog;
 import com.example.demo.repository.CarRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+import com.example.demo.service.log_service.CarLogService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
@@ -15,66 +18,128 @@ import java.util.List;
 @Service
 public class CarService {
 
-    private static final Logger logger = LoggerFactory.getLogger(CarService.class);
+	private static final Logger logger = LoggerFactory.getLogger(CarService.class);
 
-    private final CarRepository carRepository;
+	private final CarRepository carRepository;
+	private final IdGeneratorService idGenerator;
+	private final CarLogService carLogService;
+	private final UserService userService;
 
-    private final IdGeneratorService idGenerator;
+	public CarService(CarRepository carRepository, IdGeneratorService idGenerator, CarLogService carLogService,
+			UserService userService) {
+		this.carRepository = carRepository;
+		this.idGenerator = idGenerator;
+		this.carLogService = carLogService;
+		this.userService = userService;
+	}
 
-    @Autowired
-    public CarService(CarRepository carRepository, IdGeneratorService idGenerator) {
-        this.carRepository = carRepository;
-        this.idGenerator = idGenerator;
-    }
+	private User getCurrentUser() {
+		return userService.getCurrentUserOrThrow();
+	}
 
-    public List<Car> getAllCars() {
-        logger.info("Fetching all cars from the database.");
-        return carRepository.findAll();
-    }
+	public List<Car> getAllCars() {
+		logger.info("Fetching all cars from the database.");
+		return carRepository.findAll();
+	}
 
-    public Car getCarById(String id) {
-        logger.info("Fetching car with ID: {}", id);
-        return carRepository.findById(id).orElseThrow(() -> {
-            logger.warn("Car not found with ID: {}", id);
-            return new VehicleNotFoundException("Car not found with ID: " + id);
-        });
-    }
+	public Car getCarById(String id) {
+		logger.info("Fetching car with ID: {}", id);
+		return carRepository.findById(id).orElseThrow(() -> {
+			logger.warn("Car not found with ID: {}", id);
+			return new VehicleNotFoundException("Car not found with ID: " + id);
+		});
+	}
 
-    public Car addCar(CarDTO dto) {
-        String generatedId = idGenerator.generateCarId();
-        Car car = new Car();
-        car.setId(generatedId);
-        car.setBrand(dto.getBrand());
-        car.setModel(dto.getModel());
-        car.setCreatedAt(Instant.now());
+	// CREATE with DynamoDB transaction (car + log)
+	public Car addCar(CarDTO dto) throws TransactionFailureException {
+		validateCarDTO(dto);
 
-        logger.info("Creating new car [ID={}, Brand={}, Model={}]", generatedId, dto.getBrand(), dto.getModel());
+		final User currentUser = getCurrentUser();
+		final String performedByUserId = currentUser.getId();
+		final String performedByUsername = currentUser.getUsername();
 
-        return carRepository.save(car);
-    }
+		String generatedId = idGenerator.generateCarId();
+		Car car = new Car();
+		car.setId(generatedId);
+		car.setBrand(dto.getBrand().trim());
+		car.setModel(dto.getModel().trim());
+		car.setCreatedAt(Instant.now());
 
-    public Car updateCar(String id, CarDTO dto) {
-        logger.info("Attempting to update car with ID: {}", id);
-        Car existingCar = carRepository.findById(id).orElseThrow(() -> {
-            logger.warn("Cannot update. Car not found with ID: {}", id);
-            return new VehicleNotFoundException("Car with ID " + id + " not found");
-        });
+		CarLog log = carLogService.buildCarLog(car, "CREATE", performedByUserId, performedByUsername);
 
-        existingCar.setBrand(dto.getBrand());
-        existingCar.setModel(dto.getModel());
+		logger.info("Creating new car & log [carId={}, logId={}]", car.getId(), log.getId());
 
-        logger.info("Successfully updated car with ID: {}", id);
-        return carRepository.save(existingCar);
-    }
+		try {
+			return carRepository.saveWithLog(car, log);
+		} catch (RuntimeException ex) {
+			logger.error("Failed to create car with transactional log for carId={}: {}", car.getId(), ex.getMessage(),
+					ex);
+			throw ex;
+		}
+	}
 
-    public void deleteCar(String id) {
-        logger.info("Attempting to delete car with ID: {}", id);
-        if (!carRepository.existsById(id)) {
-            logger.warn("Cannot delete. Car not found with ID: {}", id);
-            throw new VehicleNotFoundException("Cannot delete. Car not found with ID: " + id);
-        }
+	// UPDATE with transaction (update + log)
+	public Car updateCar(String id, CarDTO dto) throws TransactionFailureException {
+		validateCarDTO(dto);
 
-        carRepository.deleteById(id);
-        logger.info("Successfully deleted car with ID: {}", id);
-    }
+		final User currentUser = getCurrentUser();
+		final String performedByUserId = currentUser.getId();
+		final String performedByUsername = currentUser.getUsername();
+
+		Car existing = carRepository.findById(id).orElseThrow(() -> {
+			logger.warn("Cannot update. Car not found with ID: {}", id);
+			return new VehicleNotFoundException("Car with ID " + id + " not found");
+		});
+
+		existing.setBrand(dto.getBrand().trim());
+		existing.setModel(dto.getModel().trim());
+
+		CarLog log = carLogService.buildCarLog(existing, "UPDATE", performedByUserId, performedByUsername);
+
+		logger.info("Updating car & writing log [carId={}, logId={}]", existing.getId(), log.getId());
+
+		try {
+			return carRepository.updateWithLog(existing, log);
+		} catch (RuntimeException ex) {
+			logger.error("Failed to update car with transactional log for carId={}: {}", existing.getId(),
+					ex.getMessage(), ex);
+			throw ex;
+		}
+	}
+
+	// DELETE with transaction (delete + log)
+	public void deleteCar(String id) throws TransactionFailureException {
+		Car existing = carRepository.findById(id).orElseThrow(() -> {
+			logger.warn("Cannot delete. Car not found with ID: {}", id);
+			return new VehicleNotFoundException("Cannot delete. Car not found with ID: " + id);
+		});
+
+		final User currentUser = getCurrentUser();
+		final String performedByUserId = currentUser.getId();
+		final String performedByUsername = currentUser.getUsername();
+
+		CarLog log = carLogService.buildCarLog(existing, "DELETE", performedByUserId, performedByUsername);
+
+		logger.info("Deleting car & writing log [carId={}, logId={}]", existing.getId(), log.getId());
+
+		try {
+			carRepository.deleteWithLog(existing, log);
+		} catch (RuntimeException ex) {
+			logger.error("Failed to delete car with transactional log for carId={}: {}", existing.getId(),
+					ex.getMessage(), ex);
+			throw ex;
+		}
+	}
+
+	private void validateCarDTO(CarDTO dto) {
+		if (dto == null) {
+			throw new IllegalArgumentException("Car data is required");
+		}
+		if (dto.getBrand() == null || dto.getBrand().trim().isEmpty()) {
+			throw new IllegalArgumentException("Car brand is required");
+		}
+		if (dto.getModel() == null || dto.getModel().trim().isEmpty()) {
+			throw new IllegalArgumentException("Car model is required");
+		}
+	}
 }

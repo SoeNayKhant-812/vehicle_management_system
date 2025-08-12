@@ -3,7 +3,6 @@ package com.example.demo.controller;
 import com.example.demo.dto.LoginRequest;
 import com.example.demo.dto.LoginResponse;
 import com.example.demo.dto.UserRegisterRequest;
-import com.example.demo.security.JwtAuthEntryPoint;
 import com.example.demo.service.JwtService;
 import com.example.demo.service.UserService;
 
