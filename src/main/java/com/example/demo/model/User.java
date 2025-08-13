@@ -6,12 +6,16 @@ import java.time.Instant;
 
 @DynamoDbBean
 public class User {
+	
+	public static final String USERNAME_INDEX = "username-index";
+	
 	private String id;
 	private String username;
 	private String password;
 	private String email;
 	private Instant createdAt;
 	private Role role;
+	private Instant tokenValidAfter;
 
 	@DynamoDbPartitionKey
 	@DynamoDbAttribute("id")
@@ -22,7 +26,8 @@ public class User {
 	public void setId(String id) {
 		this.id = id;
 	}
-
+	
+	@DynamoDbSecondaryPartitionKey(indexNames = USERNAME_INDEX)
 	@DynamoDbAttribute("username")
 	public String getUsername() {
 		return username;
@@ -66,5 +71,14 @@ public class User {
 
 	public void setRole(Role role) {
 		this.role = role;
+	}
+	
+	@DynamoDbAttribute("tokenValidAfter")
+	public Instant getTokenValidAfter() {
+		return tokenValidAfter;
+	}
+
+	public void setTokenValidAfter(Instant tokenValidAfter) {
+		this.tokenValidAfter = tokenValidAfter;
 	}
 }

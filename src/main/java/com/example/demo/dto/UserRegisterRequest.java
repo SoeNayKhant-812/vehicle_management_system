@@ -17,9 +17,9 @@ public class UserRegisterRequest {
 	@NotBlank(message = "Password is required")
 	@Size(min = 6, message = "Password must be at least 6 characters")
 	private String password;
-	@NotBlank(message = "Role is required")
 
-	private String role = "USER";
+	@NotBlank(message = "Role is required")
+	private String role;
 
 	public String getUsername() {
 		return username;

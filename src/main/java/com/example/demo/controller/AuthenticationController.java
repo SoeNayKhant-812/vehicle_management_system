@@ -18,6 +18,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+//import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,47 +27,61 @@ import java.util.List;
 @RequestMapping("/auth")
 public class AuthenticationController {
 
-    private static final Logger logger = LoggerFactory.getLogger(AuthenticationController.class);
-    private final AuthenticationManager authenticationManager;
-    private final UserDetailsService userDetailsService;
-    private final JwtService jwtService;
-    private final UserService userService;
+	private static final Logger logger = LoggerFactory.getLogger(AuthenticationController.class);
+	private final AuthenticationManager authenticationManager;
+	private final UserDetailsService userDetailsService;
+	private final JwtService jwtService;
+	private final UserService userService;
 
-    @Autowired
-    public AuthenticationController(AuthenticationManager authenticationManager, UserDetailsService userDetailsService, JwtService jwtService, UserService userService) {
-        this.authenticationManager = authenticationManager;
-        this.userDetailsService = userDetailsService;
-        this.jwtService = jwtService;
-        this.userService = userService;
-    }
+	@Autowired
+	public AuthenticationController(AuthenticationManager authenticationManager, UserDetailsService userDetailsService,
+			JwtService jwtService, UserService userService) {
+		this.authenticationManager = authenticationManager;
+		this.userDetailsService = userDetailsService;
+		this.jwtService = jwtService;
+		this.userService = userService;
+	}
 
-    @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        logger.info("Attempting login for user: {}", request.getUsername());
+	@PostMapping("/login")
+	public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+		logger.info("Attempting login for user: {}", request.getUsername());
+		
+//		BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+//		String encodedPassword = encoder.encode(request.getPassword());
+//		request.setPassword(encodedPassword);
+		// Perform authentication
+		Authentication authentication = new UsernamePasswordAuthenticationToken(request.getUsername(),
+				request.getPassword());
+		authenticationManager.authenticate(authentication);
 
-        // Perform authentication
-        Authentication authentication = new UsernamePasswordAuthenticationToken(request.getUsername(),
-                request.getPassword());
-        authenticationManager.authenticate(authentication);
+		// Generate JWT token
+		UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());
+		List<String> roles = userDetails.getAuthorities().stream()
+				.map(authority -> authority.getAuthority().replace("ROLE_", "")).toList();
 
-        // Generate JWT token
-        UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());
-        List<String> roles = userDetails.getAuthorities().stream()
-                .map(authority -> authority.getAuthority().replace("ROLE_", "")).toList();
+		String token = jwtService.generateToken(userDetails.getUsername(), roles);
 
-        String token = jwtService.generateToken(userDetails.getUsername(), roles);
+		logger.info("Login successful for user: {}", request.getUsername());
+		return ResponseEntity.ok(new LoginResponse(token));
+	}
 
-        logger.info("Login successful for user: {}", request.getUsername());
-        return ResponseEntity.ok(new LoginResponse(token));
-    }
+	@PostMapping("/register")
+	public ResponseEntity<String> register(@Valid @RequestBody UserRegisterRequest request) {
+		logger.info("Registering new user: {}", request.getUsername());
 
-    @PostMapping("/register")
-    public ResponseEntity<String> register(@Valid @RequestBody UserRegisterRequest request) {
-        logger.info("Registering new user: {}", request.getUsername());
+		userService.addUser(request);
 
-        userService.addUser(request);
+		logger.info("Registration successful for user: {}", request.getUsername());
+		return ResponseEntity.ok("User registered successfully.");
+	}
 
-        logger.info("Registration successful for user: {}", request.getUsername());
-        return ResponseEntity.ok("User registered successfully.");
-    }
+	@PostMapping("/logout")
+	public ResponseEntity<String> logout(Authentication authentication) {
+		if (authentication == null || !authentication.isAuthenticated()) {
+			return ResponseEntity.badRequest().body("No authenticated user to log out.");
+		}
+		String username = authentication.getName();
+		userService.logout(username);
+		return ResponseEntity.ok("Logged out successfully.");
+	}
 }

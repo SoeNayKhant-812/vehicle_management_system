@@ -1,37 +1,44 @@
 package com.example.demo.security;
 
-import com.example.demo.model.User;
-import com.example.demo.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.userdetails.*;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.stereotype.Service;
-
+import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import com.example.demo.model.User;
 
-@Service
-public class UserDetailsImpl implements UserDetailsService {
+public class UserDetailsImpl implements UserDetails {
 
-	private final UserRepository userRepository;
+    private static final long serialVersionUID = 1L;
+    private final String username;
+    private final String password;
+    private final Collection<? extends GrantedAuthority> authorities;
+    private final Instant tokenValidAfter;
 
-	@Autowired
-	public UserDetailsImpl(UserRepository userRepository) {
-		this.userRepository = userRepository;
-	}
+    public UserDetailsImpl(User user) {
+        this.username = user.getUsername();
+        this.password = user.getPassword();
+        this.authorities = List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().getName().toUpperCase()));
+        this.tokenValidAfter = user.getTokenValidAfter();
+    }
 
-	@Override
-	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-		User user = userRepository.findAll().stream()
-				.filter(u -> u.getUsername().equals(username))
-				.findFirst()
-				.orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+    public Instant getTokenValidAfter() {
+        return tokenValidAfter;
+    }
 
-		SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole().getName().toUpperCase());
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return authorities;
+    }
 
-		return new org.springframework.security.core.userdetails.User(
-				user.getUsername(),
-				user.getPassword(),
-				List.of(authority)
-		);
-	}
+    @Override
+    public String getPassword() {
+        return this.password;
+    }
+
+    @Override
+    public String getUsername() {
+        return this.username;
+    }
 }

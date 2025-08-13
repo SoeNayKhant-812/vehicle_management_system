@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import software.amazon.awssdk.enhanced.dynamodb.*;
 import software.amazon.awssdk.enhanced.dynamodb.model.*;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
 import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
 
 import java.util.ArrayList;
@@ -33,7 +34,13 @@ public class UserRepository {
 	@PostConstruct
 	public void createTablesIfNotExists() {
 		try {
-			userTable.createTable();
+//			userTable.createTable();
+			EnhancedGlobalSecondaryIndex gsi = EnhancedGlobalSecondaryIndex.builder().indexName(User.USERNAME_INDEX)
+					// THIS LINE IS CRUCIAL. It ensures all attributes are copied to the GSI.
+					.projection(p -> p.projectionType(ProjectionType.ALL)).build();
+
+			userTable.createTable(r -> r.globalSecondaryIndices(gsi));
+			System.out.println("User table with GSI created successfully.");
 		} catch (Exception e) {
 			logger.debug("User table may already exist or creation failed: {}", e.getMessage());
 		}
@@ -54,6 +61,21 @@ public class UserRepository {
 
 	public Optional<User> findById(String id) {
 		return Optional.ofNullable(userTable.getItem(r -> r.key(Key.builder().partitionValue(id).build())));
+	}
+
+	public Optional<User> findByUsername(String username) {
+
+		DynamoDbIndex<User> index = userTable.index(User.USERNAME_INDEX);
+
+		QueryConditional queryConditional = QueryConditional.keyEqualTo(k -> k.partitionValue(username));
+
+		QueryEnhancedRequest request = QueryEnhancedRequest.builder().queryConditional(queryConditional).limit(1)
+				.build();
+
+//        return index.query(request).items().stream().findFirst();
+		// stream the pages, then flatMap the items from each page into a single stream
+		// of users.
+		return index.query(request).stream().flatMap(page -> page.items().stream()).findFirst();
 	}
 
 	public User save(User user) {

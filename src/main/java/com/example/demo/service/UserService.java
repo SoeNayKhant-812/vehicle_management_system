@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -30,12 +30,12 @@ public class UserService {
 
 	private final UserRepository userRepository;
 	private final IdGeneratorService idGenerator;
-	private final PasswordEncoder passwordEncoder;
+	private final BCryptPasswordEncoder passwordEncoder;
 	private final RoleRepository roleRepository;
 	private final UserLogService userLogService;
 
-	public UserService(UserRepository userRepository, IdGeneratorService idGenerator, PasswordEncoder passwordEncoder,
-			RoleRepository roleRepository, UserLogService userLogService) {
+	public UserService(UserRepository userRepository, IdGeneratorService idGenerator,
+			BCryptPasswordEncoder passwordEncoder, RoleRepository roleRepository, UserLogService userLogService) {
 		this.userRepository = userRepository;
 		this.idGenerator = idGenerator;
 		this.passwordEncoder = passwordEncoder;
@@ -59,8 +59,8 @@ public class UserService {
 			userRequest.setRole("USER");
 
 			try {
-				addUser(adminRequest);
-				addUser(userRequest);
+				createUserWithoutAuth(adminRequest);
+				createUserWithoutAuth(userRequest);
 				logger.info("Default admin and user accounts created initially!");
 			} catch (Exception ex) {
 				logger.error("Failed to create default users: {}", ex.getMessage(), ex);
@@ -70,6 +70,18 @@ public class UserService {
 
 	private User getCurrentUser() {
 		return getCurrentUserOrThrow();
+	}
+
+	public void logout(String username) {
+
+		User user = userRepository.findByUsername(username)
+				.orElseThrow(() -> new UserNotFoundException("User not found for logout: " + username));
+		user.setTokenValidAfter(Instant.now());
+
+		userRepository.save(user);
+
+		logger.info("User {} logged out. All tokens issued before {} are now invalid.", username,
+				user.getTokenValidAfter());
 	}
 
 	public Optional<User> getCurrentUserOpt() {
@@ -99,15 +111,50 @@ public class UserService {
 	}
 
 	public User addUser(UserRegisterRequest request) throws TransactionFailureException {
-		validateUserRequest(request);
+	    validateUserRequest(request);
+	    Optional<User> currentUserOpt = getCurrentUserOpt();
 
-		User currentUser = getCurrentUser();
-		String performedByUserId = currentUser.getId();
-		String performedByUsername = currentUser.getUsername();
+	    if (currentUserOpt.isPresent()) {
+	        User currentUser = currentUserOpt.get();
+	        String performedByUserId = currentUser.getId();
+	        String performedByUsername = currentUser.getUsername();
 
+	        logger.info("User '{}' is creating a new user with username '{}'", performedByUsername, request.getUsername());
+
+	        String newUserId = idGenerator.generateUserId();
+	        User newUser = new User();
+
+	        newUser.setId(newUserId);
+	        newUser.setUsername(request.getUsername());
+	        newUser.setEmail(request.getEmail());
+	        newUser.setPassword(passwordEncoder.encode(request.getPassword()));
+	        newUser.setCreatedAt(Instant.now());
+
+	        Role role = roleRepository.findByName(request.getRole().toUpperCase())
+	                .orElseThrow(() -> new IllegalArgumentException("Invalid role: " + request.getRole()));
+	        newUser.setRole(role);
+
+	        UserLog log = userLogService.buildUserLog(newUser, "CREATE", performedByUserId, performedByUsername);
+
+	        logger.info("Creating new user & log [userId={}, logId={}]", newUser.getId(), log.getId());
+
+	        try {
+	            return userRepository.saveWithLog(newUser, log);
+	        } catch (RuntimeException ex) {
+	            logger.error("Failed to create user with transactional log for userId={}: {}", newUser.getId(),
+	                    ex.getMessage(), ex);
+	            throw new TransactionFailureException("Failed to save user with log", ex);
+	        }
+
+	    } else {
+	        logger.info("A new user with username '{}' is self-registering. Action will be logged by SYSTEM.", request.getUsername());
+	        return createUserWithoutAuth(request);
+	    }
+	}
+
+	private User createUserWithoutAuth(UserRegisterRequest request) throws TransactionFailureException {
 		String userId = idGenerator.generateUserId();
 		User user = new User();
-
 		user.setId(userId);
 		user.setUsername(request.getUsername());
 		user.setEmail(request.getEmail());
@@ -118,17 +165,8 @@ public class UserService {
 				.orElseThrow(() -> new IllegalArgumentException("Invalid role: " + request.getRole()));
 		user.setRole(role);
 
-		UserLog log = userLogService.buildUserLog(user, "CREATE", performedByUserId, performedByUsername);
-
-		logger.info("Creating new user & log [userId={}, logId={}]", user.getId(), log.getId());
-
-		try {
-			return userRepository.saveWithLog(user, log);
-		} catch (RuntimeException ex) {
-			logger.error("Failed to create user with transactional log for userId={}: {}", user.getId(),
-					ex.getMessage(), ex);
-			throw new TransactionFailureException("Failed to save user with log", ex);
-		}
+		UserLog log = userLogService.buildUserLog(user, "CREATE", "SYSTEM", "SYSTEM");
+		return userRepository.saveWithLog(user, log);
 	}
 
 	public User updateUser(String id, UserRegisterRequest request) throws TransactionFailureException {

@@ -4,7 +4,10 @@ import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+
+import com.example.demo.security.UserDetailsImpl;
 
 import java.security.Key;
 import java.util.*;
@@ -42,9 +45,21 @@ public class JwtService {
 		return List.of();
 	}
 
-	public boolean isTokenValid(String token, String username) {
+	public boolean isTokenValid(String token, UserDetails userDetails) {
 		final String extractedUsername = extractUsername(token);
-		return extractedUsername.equals(username) && !isTokenExpired(token);
+		if (!extractedUsername.equals(userDetails.getUsername()) || isTokenExpired(token)) {
+			return false;
+		}
+		if (userDetails instanceof UserDetailsImpl customUserDetails) {
+			return isTokenIssuedAfterLastLogout(token, customUserDetails);
+		}
+		return true;
+	}
+
+	private boolean isTokenIssuedAfterLastLogout(String token, UserDetailsImpl customUserDetails) {
+		final Date issuedAt = getClaims(token).getIssuedAt();
+		return customUserDetails.getTokenValidAfter() == null
+				|| issuedAt.toInstant().isAfter(customUserDetails.getTokenValidAfter());
 	}
 
 	private boolean isTokenExpired(String token) {
