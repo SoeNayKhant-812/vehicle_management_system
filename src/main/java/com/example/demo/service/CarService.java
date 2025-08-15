@@ -10,7 +10,12 @@ import com.example.demo.repository.CarRepository;
 import com.example.demo.service.log_service.CarLogService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
 import org.springframework.stereotype.Service;
+import com.example.demo.config.RedisCacheConfig;
 
 import java.time.Instant;
 import java.util.List;
@@ -37,11 +42,13 @@ public class CarService {
 		return userService.getCurrentUserOrThrow();
 	}
 
+	@Cacheable(RedisCacheConfig.CARS_CACHE) // Uses "cars" cache (5 min TTL)
 	public List<Car> getAllCars() {
 		logger.info("Fetching all cars from the database.");
 		return carRepository.findAll();
 	}
 
+	@Cacheable(value = RedisCacheConfig.CAR_CACHE, key = "#id") // Uses "car" cache (1 hour TTL)
 	public Car getCarById(String id) {
 		logger.info("Fetching car with ID: {}", id);
 		return carRepository.findById(id).orElseThrow(() -> {
@@ -51,6 +58,9 @@ public class CarService {
 	}
 
 	// CREATE with DynamoDB transaction (car + log)
+	@Caching(put = { @CachePut(value = RedisCacheConfig.CAR_CACHE, key = "#result.id") }, // Puts new car in "car" cache
+			evict = { @CacheEvict(value = RedisCacheConfig.CARS_CACHE, allEntries = true) } // Clears "cars" cache
+	)
 	public Car addCar(CarDTO dto) throws TransactionFailureException {
 		validateCarDTO(dto);
 
@@ -79,6 +89,9 @@ public class CarService {
 	}
 
 	// UPDATE with transaction (update + log)
+	@Caching(put = { @CachePut(value = RedisCacheConfig.CAR_CACHE, key = "#id") }, // Updates car in "car" cache
+			evict = { @CacheEvict(value = RedisCacheConfig.CARS_CACHE, allEntries = true) } // Clears "cars" cache
+	)
 	public Car updateCar(String id, CarDTO dto) throws TransactionFailureException {
 		validateCarDTO(dto);
 
@@ -108,6 +121,9 @@ public class CarService {
 	}
 
 	// DELETE with transaction (delete + log)
+	@Caching(evict = { @CacheEvict(value = RedisCacheConfig.CAR_CACHE, key = "#id"), // Removes from "car" cache
+			@CacheEvict(value = RedisCacheConfig.CARS_CACHE, allEntries = true) // Clears "cars" cache
+	})
 	public void deleteCar(String id) throws TransactionFailureException {
 		Car existing = carRepository.findById(id).orElseThrow(() -> {
 			logger.warn("Cannot delete. Car not found with ID: {}", id);
