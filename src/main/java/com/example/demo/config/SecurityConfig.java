@@ -41,6 +41,7 @@ public class SecurityConfig {
                         .accessDeniedHandler(jwtAccessDeniedHandler) // 403
                 ).authorizeHttpRequests(auth -> auth
                         .requestMatchers("/cars/**").permitAll()
+                        .requestMatchers("/swagger-ui.html").permitAll()
                         .requestMatchers("/auth/login", "/auth/register").permitAll()
                         .requestMatchers("/motorcycles/**").hasRole("USER")
                         .requestMatchers("/trucks/**").hasRole("ADMIN")
