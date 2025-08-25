@@ -34,15 +34,21 @@ public class SecurityConfig {
         this.jwtAccessDeniedHandler = jwtAccessDeniedHandler;
         this.jwtFilter = jwtFilter;
     }
+    
+    private static final String[] PUBLIC_URLS = {
+            "/auth/**",
+            "/cars/**",
+            "/v3/api-docs/**",      // <-- The OpenAPI specification JSON
+            "/swagger-ui/**",       // <-- The Swagger UI resources
+            "/swagger-ui.html"      // <-- The main Swagger UI page
+    };
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthEntryPoint) // 401
                         .accessDeniedHandler(jwtAccessDeniedHandler) // 403
                 ).authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/cars/**").permitAll()
-                        .requestMatchers("/swagger-ui.html").permitAll()
-                        .requestMatchers("/auth/login", "/auth/register").permitAll()
+                        .requestMatchers(PUBLIC_URLS).permitAll()
                         .requestMatchers("/motorcycles/**").hasRole("USER")
                         .requestMatchers("/trucks/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
