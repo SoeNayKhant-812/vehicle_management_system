@@ -53,6 +53,9 @@ public class AuthenticationController {
 		Authentication authentication = new UsernamePasswordAuthenticationToken(request.getUsername(),
 				request.getPassword());
 		authenticationManager.authenticate(authentication);
+		
+		// 2. After successful authentication, invalidate all old tokens by updating the timestamp.
+		//userService.updateTokenValidityTimestamp(request.getUsername());
 
 		// Generate JWT token
 		UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());

@@ -11,6 +11,8 @@ import com.example.demo.repository.RoleRepository;
 import com.example.demo.service.log_service.UserLogService;
 
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,14 +35,17 @@ public class UserService {
 	private final BCryptPasswordEncoder passwordEncoder;
 	private final RoleRepository roleRepository;
 	private final UserLogService userLogService;
+	private final EmailService emailService;
 
 	public UserService(UserRepository userRepository, IdGeneratorService idGenerator,
-			BCryptPasswordEncoder passwordEncoder, RoleRepository roleRepository, UserLogService userLogService) {
+			BCryptPasswordEncoder passwordEncoder, RoleRepository roleRepository, UserLogService userLogService,
+			EmailService emailService) {
 		this.userRepository = userRepository;
 		this.idGenerator = idGenerator;
 		this.passwordEncoder = passwordEncoder;
 		this.roleRepository = roleRepository;
 		this.userLogService = userLogService;
+		this.emailService = emailService;
 	}
 
 	@PostConstruct
@@ -67,6 +72,23 @@ public class UserService {
 			}
 		}
 	}
+	
+    @PreDestroy
+    public void invalidateAllUserTokensOnShutdown() {
+        logger.info("Application is shutting down. Invalidating all user tokens...");
+        try {
+            List<User> allUsers = userRepository.findAll();
+            Instant shutdownTime = Instant.now();
+
+            for (User user : allUsers) {
+                user.setTokenValidAfter(shutdownTime);
+                userRepository.save(user); // Note: This might be slow if you have many users
+            }
+            logger.info("Successfully invalidated tokens for {} users.", allUsers.size());
+        } catch (Exception e) {
+            logger.error("Error during token invalidation on shutdown.", e);
+        }
+    }
 
 	private User getCurrentUser() {
 		return getCurrentUserOrThrow();
@@ -96,6 +118,16 @@ public class UserService {
 	public User getCurrentUserOrThrow() {
 		return getCurrentUserOpt().orElseThrow(() -> new UserNotFoundException("No authenticated user found"));
 	}
+	
+//	public void updateTokenValidityTimestamp(String username) {
+//	    User user = userRepository.findByUsername(username)
+//	            .orElseThrow(() -> new UserNotFoundException("User not found while updating token timestamp: " + username));
+//	    
+//	    user.setTokenValidAfter(Instant.now());
+//
+//	    userRepository.save(user);
+//	    logger.info("Updated token validity timestamp for user '{}'.", username);
+//	}
 
 	public List<User> getAllUsers() {
 		logger.info("Fetching all users from the database.");
@@ -111,45 +143,56 @@ public class UserService {
 	}
 
 	public User addUser(UserRegisterRequest request) throws TransactionFailureException {
-	    validateUserRequest(request);
-	    Optional<User> currentUserOpt = getCurrentUserOpt();
+		validateUserRequest(request);
+		Optional<User> currentUserOpt = getCurrentUserOpt();
 
-	    if (currentUserOpt.isPresent()) {
-	        User currentUser = currentUserOpt.get();
-	        String performedByUserId = currentUser.getId();
-	        String performedByUsername = currentUser.getUsername();
+		if (currentUserOpt.isPresent()) {
+			User currentUser = currentUserOpt.get();
+			String performedByUserId = currentUser.getId();
+			String performedByUsername = currentUser.getUsername();
 
-	        logger.info("User '{}' is creating a new user with username '{}'", performedByUsername, request.getUsername());
+			logger.info("User '{}' is creating a new user with username '{}'", performedByUsername,
+					request.getUsername());
 
-	        String newUserId = idGenerator.generateUserId();
-	        User newUser = new User();
+			String newUserId = idGenerator.generateUserId();
+			User newUser = new User();
 
-	        newUser.setId(newUserId);
-	        newUser.setUsername(request.getUsername());
-	        newUser.setEmail(request.getEmail());
-	        newUser.setPassword(passwordEncoder.encode(request.getPassword()));
-	        newUser.setCreatedAt(Instant.now());
+			newUser.setId(newUserId);
+			newUser.setUsername(request.getUsername());
+			newUser.setEmail(request.getEmail());
+			newUser.setPassword(passwordEncoder.encode(request.getPassword()));
+			newUser.setCreatedAt(Instant.now());
 
-	        Role role = roleRepository.findByName(request.getRole().toUpperCase())
-	                .orElseThrow(() -> new IllegalArgumentException("Invalid role: " + request.getRole()));
-	        newUser.setRole(role);
+			Role role = roleRepository.findByName(request.getRole().toUpperCase())
+					.orElseThrow(() -> new IllegalArgumentException("Invalid role: " + request.getRole()));
+			newUser.setRole(role);
 
-	        UserLog log = userLogService.buildUserLog(newUser, "CREATE", performedByUserId, performedByUsername);
+			UserLog log = userLogService.buildUserLog(newUser, "CREATE", performedByUserId, performedByUsername);
 
-	        logger.info("Creating new user & log [userId={}, logId={}]", newUser.getId(), log.getId());
+			logger.info("Creating new user & log [userId={}, logId={}]", newUser.getId(), log.getId());
 
-	        try {
-	            return userRepository.saveWithLog(newUser, log);
-	        } catch (RuntimeException ex) {
-	            logger.error("Failed to create user with transactional log for userId={}: {}", newUser.getId(),
-	                    ex.getMessage(), ex);
-	            throw new TransactionFailureException("Failed to save user with log", ex);
-	        }
+			try {
+				User savedUser = userRepository.saveWithLog(newUser, log);
+				// Async call
+				emailService.sendWelcomeEmail(savedUser);
+				return savedUser;
+				// return userRepository.saveWithLog(newUser, log);
+			} catch (RuntimeException ex) {
+				logger.error("Failed to create user with transactional log for userId={}: {}", newUser.getId(),
+						ex.getMessage(), ex);
+				throw new TransactionFailureException("Failed to save user with log", ex);
+			}
 
-	    } else {
-	        logger.info("A new user with username '{}' is self-registering. Action will be logged by SYSTEM.", request.getUsername());
-	        return createUserWithoutAuth(request);
-	    }
+		} else {
+			logger.info("A new user with username '{}' is self-registering. Action will be logged by SYSTEM.",
+					request.getUsername());
+			// return createUserWithoutAuth(request);
+			// Logic for self-registration
+			User savedUser = createUserWithoutAuth(request);
+			// Async call
+			emailService.sendWelcomeEmail(savedUser);
+			return savedUser;
+		}
 	}
 
 	private User createUserWithoutAuth(UserRegisterRequest request) throws TransactionFailureException {
@@ -194,7 +237,11 @@ public class UserService {
 		logger.info("Updating user & writing log [userId={}, logId={}]", existingUser.getId(), log.getId());
 
 		try {
-			return userRepository.updateWithLog(existingUser, log);
+			// return userRepository.updateWithLog(existingUser, log);
+			User updatedUser = userRepository.updateWithLog(existingUser, log);
+			// Async call
+			emailService.sendAccountUpdateEmail(updatedUser);
+			return updatedUser;
 		} catch (RuntimeException ex) {
 			logger.error("Failed to update user with transactional log for userId={}: {}", existingUser.getId(),
 					ex.getMessage(), ex);
