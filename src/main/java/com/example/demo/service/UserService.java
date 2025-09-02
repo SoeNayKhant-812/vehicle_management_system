@@ -9,13 +9,17 @@ import com.example.demo.model.log_model.UserLog;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.repository.RoleRepository;
 import com.example.demo.service.log_service.UserLogService;
+import com.example.demo.config.RedisCacheConfig;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -36,16 +40,20 @@ public class UserService {
 	private final RoleRepository roleRepository;
 	private final UserLogService userLogService;
 	private final EmailService emailService;
+	private final MetricsService metricsService;
+
 
 	public UserService(UserRepository userRepository, IdGeneratorService idGenerator,
 			BCryptPasswordEncoder passwordEncoder, RoleRepository roleRepository, UserLogService userLogService,
-			EmailService emailService) {
+			EmailService emailService, 
+            MetricsService metricsService) {
 		this.userRepository = userRepository;
 		this.idGenerator = idGenerator;
 		this.passwordEncoder = passwordEncoder;
 		this.roleRepository = roleRepository;
 		this.userLogService = userLogService;
 		this.emailService = emailService;
+		this.metricsService = metricsService;
 	}
 
 	@PostConstruct
@@ -82,7 +90,7 @@ public class UserService {
 
             for (User user : allUsers) {
                 user.setTokenValidAfter(shutdownTime);
-                userRepository.save(user); // Note: This might be slow if you have many users
+                userRepository.save(user);
             }
             logger.info("Successfully invalidated tokens for {} users.", allUsers.size());
         } catch (Exception e) {
@@ -119,21 +127,23 @@ public class UserService {
 		return getCurrentUserOpt().orElseThrow(() -> new UserNotFoundException("No authenticated user found"));
 	}
 	
-//	public void updateTokenValidityTimestamp(String username) {
-//	    User user = userRepository.findByUsername(username)
-//	            .orElseThrow(() -> new UserNotFoundException("User not found while updating token timestamp: " + username));
-//	    
-//	    user.setTokenValidAfter(Instant.now());
-//
-//	    userRepository.save(user);
-//	    logger.info("Updated token validity timestamp for user '{}'.", username);
-//	}
+	public void updateTokenValidityTimestamp(String username) {
+	    User user = userRepository.findByUsername(username)
+	            .orElseThrow(() -> new UserNotFoundException("User not found while updating token timestamp: " + username));
+	    
+	    user.setTokenValidAfter(Instant.now());
 
+	    userRepository.save(user);
+	    logger.info("Updated token validity timestamp for user '{}'.", username);
+	}
+	
+	@Cacheable(RedisCacheConfig.USERS_CACHE)
 	public List<User> getAllUsers() {
 		logger.info("Fetching all users from the database.");
 		return userRepository.findAll();
 	}
-
+	
+	@Cacheable(value = RedisCacheConfig.USER_CACHE, key = "#id")
 	public User getUserById(String id) {
 		logger.info("Fetching user with ID: {}", id);
 		return userRepository.findById(id).orElseThrow(() -> {
@@ -141,77 +151,65 @@ public class UserService {
 			return new UserNotFoundException("User not found with ID: " + id);
 		});
 	}
-
+	
+	@Caching(
+			put = { @CachePut(value = RedisCacheConfig.USER_CACHE, key = "#result.id") },
+			evict = { @CacheEvict(value = RedisCacheConfig.USERS_CACHE, allEntries = true) }
+	)
 	public User addUser(UserRegisterRequest request) throws TransactionFailureException {
 		validateUserRequest(request);
 		Optional<User> currentUserOpt = getCurrentUserOpt();
+		User savedUser;
 
-		if (currentUserOpt.isPresent()) {
-			User currentUser = currentUserOpt.get();
-			String performedByUserId = currentUser.getId();
-			String performedByUsername = currentUser.getUsername();
-
-			logger.info("User '{}' is creating a new user with username '{}'", performedByUsername,
-					request.getUsername());
-
-			String newUserId = idGenerator.generateUserId();
-			User newUser = new User();
-
-			newUser.setId(newUserId);
-			newUser.setUsername(request.getUsername());
-			newUser.setEmail(request.getEmail());
-			newUser.setPassword(passwordEncoder.encode(request.getPassword()));
-			newUser.setCreatedAt(Instant.now());
-
-			Role role = roleRepository.findByName(request.getRole().toUpperCase())
-					.orElseThrow(() -> new IllegalArgumentException("Invalid role: " + request.getRole()));
-			newUser.setRole(role);
-
-			UserLog log = userLogService.buildUserLog(newUser, "CREATE", performedByUserId, performedByUsername);
-
-			logger.info("Creating new user & log [userId={}, logId={}]", newUser.getId(), log.getId());
-
-			try {
-				User savedUser = userRepository.saveWithLog(newUser, log);
-				// Async call
-				emailService.sendWelcomeEmail(savedUser);
-				return savedUser;
-				// return userRepository.saveWithLog(newUser, log);
-			} catch (RuntimeException ex) {
-				logger.error("Failed to create user with transactional log for userId={}: {}", newUser.getId(),
-						ex.getMessage(), ex);
-				throw new TransactionFailureException("Failed to save user with log", ex);
+		try {
+			if (currentUserOpt.isPresent()) {
+				savedUser = createUserWithAuth(request, currentUserOpt.get());
+			} else {
+				savedUser = createUserWithoutAuth(request);
 			}
-
-		} else {
-			logger.info("A new user with username '{}' is self-registering. Action will be logged by SYSTEM.",
-					request.getUsername());
-			// return createUserWithoutAuth(request);
-			// Logic for self-registration
-			User savedUser = createUserWithoutAuth(request);
-			// Async call
-			emailService.sendWelcomeEmail(savedUser);
-			return savedUser;
+		} catch (RuntimeException ex) {
+			logger.error("Failed to create user with transactional log for username '{}': {}", request.getUsername(),
+					ex.getMessage(), ex);
+			throw new TransactionFailureException("Failed to save user with log", ex);
 		}
+		emailService.sendWelcomeEmail(savedUser);
+		metricsService.incrementUserCount();
+		
+		return savedUser;
 	}
+	
+    private User createUserObject(UserRegisterRequest request) {
+        String userId = idGenerator.generateUserId();
+        User user = new User();
+        user.setId(userId);
+        user.setUsername(request.getUsername());
+        user.setEmail(request.getEmail());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setCreatedAt(Instant.now());
+        Role role = roleRepository.findByName(request.getRole().toUpperCase())
+                .orElseThrow(() -> new IllegalArgumentException("Invalid role: " + request.getRole()));
+        user.setRole(role);
+        return user;
+    }
+    
+	private User createUserWithAuth(UserRegisterRequest request, User currentUser) {
+        User newUser = createUserObject(request);
+        UserLog log = userLogService.buildUserLog(newUser, "CREATE", currentUser.getId(), currentUser.getUsername());
+		logger.info("User '{}' is creating new user & log [userId={}, logId={}]", currentUser.getUsername(), newUser.getId(), log.getId());
+        return userRepository.saveWithLog(newUser, log);
+    }
 
 	private User createUserWithoutAuth(UserRegisterRequest request) throws TransactionFailureException {
-		String userId = idGenerator.generateUserId();
-		User user = new User();
-		user.setId(userId);
-		user.setUsername(request.getUsername());
-		user.setEmail(request.getEmail());
-		user.setPassword(passwordEncoder.encode(request.getPassword()));
-		user.setCreatedAt(Instant.now());
-
-		Role role = roleRepository.findByName(request.getRole().toUpperCase())
-				.orElseThrow(() -> new IllegalArgumentException("Invalid role: " + request.getRole()));
-		user.setRole(role);
-
-		UserLog log = userLogService.buildUserLog(user, "CREATE", "SYSTEM", "SYSTEM");
-		return userRepository.saveWithLog(user, log);
+		User newUser = createUserObject(request);
+		UserLog log = userLogService.buildUserLog(newUser, "CREATE", "SYSTEM", "SYSTEM");
+        logger.info("A new user with username '{}' is self-registering or the system is creating initial user. Action will be logged by SYSTEM.", request.getUsername());
+		return userRepository.saveWithLog(newUser, log);
 	}
-
+	
+	@Caching(
+			put = { @CachePut(value = RedisCacheConfig.USER_CACHE, key = "#id") },
+			evict = { @CacheEvict(value = RedisCacheConfig.USERS_CACHE, allEntries = true) }
+	)
 	public User updateUser(String id, UserRegisterRequest request) throws TransactionFailureException {
 		validateUserRequest(request);
 
@@ -223,6 +221,9 @@ public class UserService {
 			logger.warn("Cannot update. User not found with ID: {}", id);
 			return new UserNotFoundException("User with ID " + id + " not found");
 		});
+		
+		boolean securityProfileChanged = !passwordEncoder.matches(request.getPassword(), existingUser.getPassword())
+                || !request.getRole().equalsIgnoreCase(existingUser.getRole().getName());
 
 		existingUser.setUsername(request.getUsername());
 		existingUser.setEmail(request.getEmail());
@@ -231,13 +232,17 @@ public class UserService {
 		Role role = roleRepository.findByName(request.getRole().toUpperCase())
 				.orElseThrow(() -> new IllegalArgumentException("Invalid role: " + request.getRole()));
 		existingUser.setRole(role);
+		
+        if (securityProfileChanged) {
+            logger.info("Security profile changed for user '{}'. Invalidating old tokens.", existingUser.getUsername());
+            existingUser.setTokenValidAfter(Instant.now());
+        }
 
 		UserLog log = userLogService.buildUserLog(existingUser, "UPDATE", performedByUserId, performedByUsername);
 
 		logger.info("Updating user & writing log [userId={}, logId={}]", existingUser.getId(), log.getId());
 
 		try {
-			// return userRepository.updateWithLog(existingUser, log);
 			User updatedUser = userRepository.updateWithLog(existingUser, log);
 			// Async call
 			emailService.sendAccountUpdateEmail(updatedUser);
@@ -248,7 +253,13 @@ public class UserService {
 			throw new TransactionFailureException("Failed to update user with log", ex);
 		}
 	}
-
+	
+	@Caching(
+			evict = {
+					@CacheEvict(value = RedisCacheConfig.USER_CACHE, key = "#id"),
+					@CacheEvict(value = RedisCacheConfig.USERS_CACHE, allEntries = true)
+			}
+	)
 	public void deleteUser(String id) throws TransactionFailureException {
 		User existingUser = userRepository.findById(id).orElseThrow(() -> {
 			logger.warn("Cannot delete. User not found with ID: {}", id);
@@ -265,6 +276,7 @@ public class UserService {
 
 		try {
 			userRepository.deleteWithLog(existingUser, log);
+			metricsService.decrementUserCount();
 		} catch (RuntimeException ex) {
 			logger.error("Failed to delete user with transactional log for userId={}: {}", existingUser.getId(),
 					ex.getMessage(), ex);

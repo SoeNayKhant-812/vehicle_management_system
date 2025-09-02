@@ -53,6 +53,10 @@ public class UserRepository {
 
 	// Basic CRUD ----------------------------------------------------------
 
+    public long count() {
+        return userTable.scan().items().stream().count();
+    }
+	
 	public List<User> findAll() {
 		List<User> users = new ArrayList<>();
 		userTable.scan().items().forEach(users::add);

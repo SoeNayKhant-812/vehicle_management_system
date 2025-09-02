@@ -29,13 +29,15 @@ public class CarService {
 	private final IdGeneratorService idGenerator;
 	private final CarLogService carLogService;
 	private final UserService userService;
+	private final MetricsService metricsService;
 
 	public CarService(CarRepository carRepository, IdGeneratorService idGenerator, CarLogService carLogService,
-			UserService userService) {
+			UserService userService, MetricsService metricsService) {
 		this.carRepository = carRepository;
 		this.idGenerator = idGenerator;
 		this.carLogService = carLogService;
 		this.userService = userService;
+		this.metricsService = metricsService;
 	}
 
 	private User getCurrentUser() {
@@ -80,7 +82,9 @@ public class CarService {
 		logger.info("Creating new car & log [carId={}, logId={}]", car.getId(), log.getId());
 
 		try {
-			return carRepository.saveWithLog(car, log);
+			Car savedCar = carRepository.saveWithLog(car, log);
+			metricsService.incrementCarCount();
+			return savedCar;
 		} catch (RuntimeException ex) {
 			logger.error("Failed to create car with transactional log for carId={}: {}", car.getId(), ex.getMessage(),
 					ex);
@@ -140,6 +144,7 @@ public class CarService {
 
 		try {
 			carRepository.deleteWithLog(existing, log);
+			metricsService.decrementCarCount();
 		} catch (RuntimeException ex) {
 			logger.error("Failed to delete car with transactional log for carId={}: {}", existing.getId(),
 					ex.getMessage(), ex);

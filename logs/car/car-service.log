@@ -56,3 +56,16 @@
 12:23:10.563 INFO  [http-nio-8002-exec-3] com.example.demo.service.CarService - Fetching all cars from the database.
 12:38:41.785 INFO  [http-nio-8002-exec-3] com.example.demo.service.CarService - Fetching all cars from the database.
 13:13:49.855 INFO  [http-nio-8002-exec-1] com.example.demo.service.CarService - Fetching all cars from the database.
+15:53:48.595 INFO  [http-nio-8002-exec-3] com.example.demo.service.CarService - Fetching all cars from the database.
+15:55:53.566 INFO  [http-nio-8002-exec-5] com.example.demo.service.CarService - Fetching car with ID: CAR_6f8297d3-a24e-4a4b-bc5a-6557b2cf74fd_1751901165603
+17:53:55.546 INFO  [http-nio-8002-exec-3] com.example.demo.service.CarService - Fetching all cars from the database.
+18:00:56.414 INFO  [http-nio-8002-exec-2] com.example.demo.service.CarService - Fetching car with ID: CAR_6f8297d3-a24e-4a4b-bc5a-6557b2cf74fd_1751901165603
+19:39:44.033 INFO  [http-nio-8002-exec-3] com.example.demo.service.CarService - Fetching all cars from the database.
+19:41:01.227 INFO  [http-nio-8002-exec-7] com.example.demo.service.CarService - Fetching car with ID: CAR_6f8297d3-a24e-4a4b-bc5a-6557b2cf74fd_1751901165603
+19:56:44.564 INFO  [http-nio-8002-exec-3] com.example.demo.service.CarService - Fetching all cars from the database.
+19:56:52.972 INFO  [http-nio-8002-exec-4] com.example.demo.service.CarService - Fetching car with ID: CAR_6f8297d3-a24e-4a4b-bc5a-6557b2cf74fd_1751901165603
+00:15:35.787 INFO  [http-nio-8002-exec-2] com.example.demo.service.CarService - Fetching all cars from the database.
+00:15:52.272 INFO  [http-nio-8002-exec-5] com.example.demo.service.CarService - Fetching car with ID: CAR_6f8297d3-a24e-4a4b-bc5a-6557b2cf74fd_1751901165603
+00:26:27.450 INFO  [http-nio-8002-exec-7] com.example.demo.service.CarService - Fetching all cars from the database.
+00:42:24.185 INFO  [http-nio-8002-exec-3] com.example.demo.service.CarService - Fetching all cars from the database.
+00:42:31.279 INFO  [http-nio-8002-exec-4] com.example.demo.service.CarService - Fetching car with ID: CAR_6f8297d3-a24e-4a4b-bc5a-6557b2cf74fd_1751901165603

@@ -5,6 +5,7 @@
     <property name="CAR_LOG_PATH" value="logs/car"/>
     <property name="MOTORCYCLE_LOG_PATH" value="logs/motorcycle"/>
     <property name="TRUCK_LOG_PATH" value="logs/truck"/>
+    <property name="REPORT_LOG_PATH" value="logs/reports"/>
     <appender name="Console" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level [%thread] %logger{36} - %msg%n</pattern>
@@ -62,6 +63,20 @@
             <pattern>%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
+    <appender name="ReportFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${REPORT_LOG_PATH}/system-report.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+            <fileNamePattern>${REPORT_LOG_PATH}/system-report.%i.log.zip</fileNamePattern>
+            <minIndex>1</minIndex>
+            <maxIndex>3</maxIndex>
+        </rollingPolicy>
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <maxFileSize>5MB</maxFileSize>
+        </triggeringPolicy>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
     <logger name="com.example.demo.service.CarService" level="INFO" additivity="false">
         <appender-ref ref="CarServiceFile"/>
         <appender-ref ref="Console"/>
@@ -72,6 +87,10 @@
     </logger>
     <logger name="com.example.demo.service.TruckService" level="INFO" additivity="false">
         <appender-ref ref="TruckServiceFile"/>
+        <appender-ref ref="Console"/>
+    </logger>
+    <logger name="com.example.demo.task.SystemReportTasks" level="INFO" additivity="false">
+        <appender-ref ref="ReportFile"/>
         <appender-ref ref="Console"/>
     </logger>
     <root level="${LOG_LEVEL}">

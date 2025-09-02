@@ -2,10 +2,13 @@ package com.example.demo.model;
 
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.*;
 
+import java.io.Serializable;
 import java.time.Instant;
 
 @DynamoDbBean
-public class User {
+public class User implements Serializable{
+	
+	private static final long serialVersionUID = 1L;
 	
 	public static final String USERNAME_INDEX = "username-index";
 	

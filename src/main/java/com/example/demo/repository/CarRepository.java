@@ -47,6 +47,10 @@ public class CarRepository {
 
 	// Basic CRUD ----------------------------------------------------------
 
+    public long count() {
+        return carTable.scan().items().stream().count();
+    }
+    
 	public List<Car> findAll() {
 		List<Car> cars = new ArrayList<>();
 		carTable.scan().items().forEach(cars::add);

@@ -1,0 +1,15 @@
+00:35:13.251 INFO  [scheduling-1] c.e.demo.task.SystemReportTasks - --- [SYSTEM REPORT TASK STARTED] ---
+00:35:13.265 INFO  [scheduling-1] c.e.demo.task.SystemReportTasks - VMS System Report: Total Users = 5, Total Cars = 14
+00:35:13.266 INFO  [scheduling-1] c.e.demo.task.SystemReportTasks - --- [SYSTEM REPORT TASK FINISHED] ---
+00:40:13.267 INFO  [scheduling-1] c.e.demo.task.SystemReportTasks - --- [SYSTEM REPORT TASK STARTED] ---
+00:40:13.278 INFO  [scheduling-1] c.e.demo.task.SystemReportTasks - VMS System Report: Total Users = 5, Total Cars = 14
+00:40:13.278 INFO  [scheduling-1] c.e.demo.task.SystemReportTasks - --- [SYSTEM REPORT TASK FINISHED] ---
+00:42:47.203 INFO  [scheduling-1] c.e.demo.task.SystemReportTasks - --- [SYSTEM REPORT TASK STARTED] ---
+00:42:47.209 INFO  [scheduling-1] c.e.demo.task.SystemReportTasks - VMS System Report: Total Users = 5, Total Cars = 14
+00:42:47.209 INFO  [scheduling-1] c.e.demo.task.SystemReportTasks - --- [SYSTEM REPORT TASK FINISHED] ---
+00:43:47.213 INFO  [scheduling-1] c.e.demo.task.SystemReportTasks - --- [SYSTEM REPORT TASK STARTED] ---
+00:43:47.217 INFO  [scheduling-1] c.e.demo.task.SystemReportTasks - VMS System Report: Total Users = 5, Total Cars = 14
+00:43:47.217 INFO  [scheduling-1] c.e.demo.task.SystemReportTasks - --- [SYSTEM REPORT TASK FINISHED] ---
+00:44:47.221 INFO  [scheduling-1] c.e.demo.task.SystemReportTasks - --- [SYSTEM REPORT TASK STARTED] ---
+00:44:47.227 INFO  [scheduling-1] c.e.demo.task.SystemReportTasks - VMS System Report: Total Users = 5, Total Cars = 14
+00:44:47.227 INFO  [scheduling-1] c.e.demo.task.SystemReportTasks - --- [SYSTEM REPORT TASK FINISHED] ---

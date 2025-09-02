@@ -16,14 +16,20 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
 @EnableCaching
 public class RedisCacheConfig {
-
+	
+	// Cache names for Cars
     public static final String CARS_CACHE = "cars";
     public static final String CAR_CACHE = "car";
+    
+    // Cache names for Users
+    public static final String USERS_CACHE = "users";
+    public static final String USER_CACHE = "user";
 
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory, UserService userService) {
@@ -36,17 +42,28 @@ public class RedisCacheConfig {
 
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(10))
+                .computePrefixWith(cacheName -> "vms:cache:" + cacheName + "::")
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(valueSerializer));
+        
+        Map<String, RedisCacheConfiguration> cacheConfigurations = new HashMap<>();
 
-        Map<String, RedisCacheConfiguration> cacheConfigs = Map.of(
-                CARS_CACHE, defaultConfig.entryTtl(Duration.ofMinutes(5)),
-                CAR_CACHE, defaultConfig.entryTtl(Duration.ofHours(1))
-        );
+//        Map<String, RedisCacheConfiguration> cacheConfigs = Map.of(
+//                CARS_CACHE, defaultConfig.entryTtl(Duration.ofMinutes(5)),
+//                CAR_CACHE, defaultConfig.entryTtl(Duration.ofHours(1))
+//        );
+
+        // Configuration for Car caches
+        cacheConfigurations.put(CARS_CACHE, defaultConfig.entryTtl(Duration.ofMinutes(5)));
+        cacheConfigurations.put(CAR_CACHE, defaultConfig.entryTtl(Duration.ofHours(1)));
+
+        // Configuration for User caches
+        cacheConfigurations.put(USERS_CACHE, defaultConfig.entryTtl(Duration.ofMinutes(5)));
+        cacheConfigurations.put(USER_CACHE, defaultConfig.entryTtl(Duration.ofHours(1)));
 
         RedisCacheManager redisCacheManager = RedisCacheManager.builder(redisConnectionFactory)
                 .cacheDefaults(defaultConfig)
-                .withInitialCacheConfigurations(cacheConfigs)
+                .withInitialCacheConfigurations(cacheConfigurations)
                 .build();
 
         return new LoggingCacheManager(redisCacheManager, userService);
